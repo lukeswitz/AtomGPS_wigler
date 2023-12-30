@@ -1,4 +1,4 @@
-#include "M5Atom.h"
+#include <Adafruit_NeoPixel.h>
 #include <SPI.h>
 #include "FS.h"
 #include "SD.h"
@@ -7,6 +7,8 @@
 
 TinyGPSPlus gps;
 String fileName;
+
+Adafruit_NeoPixel led = Adafruit_NeoPixel(1, 27, NEO_GRB + NEO_KHZ800);
 
 const int maxMACs = 500;
 String macAddressArray[maxMACs];
@@ -17,13 +19,17 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
 
-  M5.begin(true, false, true);
+  led.begin();
+  led.setPixelColor(0, 0x000000);
+  led.show();
+  
   SPI.begin(23, 33, 19, -1); // Adjust for your SPI pins
 
   // Check if SD Card is present
   if (!SD.begin(-1, SPI, 40000000)) {
     Serial.println("SD Card initialization failed!");
-    M5.dis.drawpix(0, 0xff0000); // Flash Red if TF card is missing
+    led.setPixelColor(0, 0xff0000); // Flash Red if TF card is missing
+    led.show();
     delay(1000);
     return;
   }
@@ -66,14 +72,21 @@ void setup() {
 }
 
 void loop() {
+//  led.setPixelColor(0, 0xff00ff); // Purple
+//  led.show();
+//  delay(200);
+  
   while (Serial1.available() > 0) {
     if (gps.encode(Serial1.read())) {
       if (gps.location.isUpdated()) {
-        M5.dis.drawpix(0, 0x00ff00); // Pulse Green when GPS is locked
+        led.setPixelColor(0, 0x00ff00); //  Pulse Green when GPS is locked
+        led.show();
         Serial.println("GPS Location Updated.");
       } else {
-        M5.dis.clear(); // Clear LED if GPS not locked
+        led.setPixelColor(0, 0x000000); // Clear LED if GPS not locked
+        led.show();
         Serial.println("Waiting for GPS lock...");
+        continue;
       }
 
       float lat = gps.location.lat();
@@ -118,9 +131,11 @@ void loop() {
         if (dataFile) {
           dataFile.println(dataString);
           dataFile.close();
-          M5.dis.drawpix(0, 0x0000ff); // Flash Blue for each new Wi-Fi network
+          led.setPixelColor(0, 0x0000ff); // Flash Blue for each new Wi-Fi network
+          led.show();
           delay(200);
-          M5.dis.clear(); // Clear the LED after flashing
+          led.setPixelColor(0, 0x000000); // Clear the LED after flashing
+          led.show();
           Serial.println("Data written: " + dataString);
         } else {
           Serial.println("Error opening " + fileName);

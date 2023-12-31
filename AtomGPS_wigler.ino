@@ -1,4 +1,10 @@
+//#define M5
+#ifdef M5
 #include "M5Atom.h"
+#else
+#include <Adafruit_NeoPixel.h>
+#endif
+
 #include <SPI.h>
 #include "FS.h"
 #include "SD.h"
@@ -8,6 +14,13 @@
 TinyGPSPlus gps;
 String fileName;
 
+#ifdef M5
+#else
+Adafruit_NeoPixel led = Adafruit_NeoPixel(1, 27, NEO_GRB + NEO_KHZ800);
+#endif
+
+
+
 const int maxMACs = 75;
 String macAddressArray[maxMACs];
 int macArrayIndex = 0;
@@ -16,7 +29,13 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
 
+#ifdef M5
   M5.begin(true, false, true);
+#else
+  led.begin();
+  led.setPixelColor(0, 0x000000);
+  led.show();
+#endif
   SPI.begin(23, 33, 19, -1);
 
   unsigned long startMillis = millis();
@@ -29,13 +48,23 @@ void setup() {
       if (millis() - startMillis > blinkInterval) {
         startMillis = millis();
         ledState = !ledState;
+#ifdef M5
         M5.dis.drawpix(0, ledState ? 0xff0000 : 0x000000);  // Toggle red LED
+#else
+		led.setPixelColor(0, ledState ? 0xff0000 : 0x000000); // Flash Red if TF card is missing
+		led.show();
+#endif
       }
     }
     return;
   }
 
+#ifdef M5
   M5.dis.clear();  // Clear LED after blinking
+#else
+  led.setPixelColor(0, 0x000000);  // Clear LED after blinking
+  led.show();
+#endif
   Serial.println("SD Card initialized.");
 
   WiFi.mode(WIFI_STA);
@@ -66,14 +95,27 @@ void waitForGPSFix() {
     if (millis() - lastBlink >= blinkInterval) {
       lastBlink = millis();
       ledState = !ledState;
+#ifdef M5
       M5.dis.drawpix(0, ledState ? 0x800080 : 0x000000);  // Toggle purple LED
+#else
+	  led.setPixelColor(0, ledState ? 0x800080 : 0x000000);
+	  led.show();
+#endif
     }
   }
 
   // Green LED indicates GPS fix
+#ifdef M5
   M5.dis.drawpix(0, 0x00ff00);
   delay(200);  // Short delay to show green LED
   M5.dis.clear();
+#else
+  led.setPixelColor(0, 0x00ff00);
+  led.show();
+  delay(200);  // Short delay to show green LED
+  led.setPixelColor(0, 0x000000);
+  led.show();
+#endif
   Serial.println("GPS fix obtained.");
 }
 
@@ -111,9 +153,17 @@ void loop() {
   }
 
   if (gps.location.isValid()) {
+#ifdef M5
     M5.dis.drawpix(0, 0x00ff00);
     delay(180);  // scan delay 
     M5.dis.clear();
+#else
+    led.setPixelColor(0, 0x00ff00);
+    led.show();
+    delay(180);  // scan delay 
+    led.setPixelColor(0, 0x000000);
+    led.show();
+#endif
 
     float lat = gps.location.lat();
     float lon = gps.location.lng();
@@ -143,9 +193,17 @@ void loop() {
       }
     }
   } else {
+#ifdef M5
     M5.dis.drawpix(0, 0x800080);  // Purple LED if waiting for GPS fix
     delay(500);
     M5.dis.clear();  // Clear LED after waiting
+#else
+    led.setPixelColor(0, 0x800080);
+    led.show();
+    delay(150);
+    led.setPixelColor(0, 0x000000);
+    led.show();
+#endif
     delay(500);
   }
 }
@@ -164,15 +222,31 @@ void logData(const String& data) {
   if (dataFile) {
     dataFile.println(data);
     dataFile.close();
-    // M5.dis.drawpix(0, 0x0000ff); // Blue LED for successful write
-    // delay(150);
-    // M5.dis.clear();
+#ifdef M5
+    M5.dis.drawpix(0, 0x0000ff); // Blue LED for successful write
+    delay(150);
+    M5.dis.clear();
+#else
+    led.setPixelColor(0, 0x0000ff);
+    led.show();
+    delay(150);
+    led.setPixelColor(0, 0x000000);
+    led.show();
+#endif
     // Serial.println("Data written: " + data);
   } else {
     Serial.println("Error opening " + fileName);
+#ifdef M5
     M5.dis.drawpix(0, 0xff0000);
     delay(500);
     M5.dis.clear();  // Red flash for file write error
+#else
+    led.setPixelColor(0, 0xff0000);
+    led.show();
+    delay(150);
+    led.setPixelColor(0, 0x000000);
+    led.show();
+#endif
     delay(500);
   }
 }

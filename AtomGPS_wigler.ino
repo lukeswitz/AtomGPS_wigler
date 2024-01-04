@@ -1,4 +1,8 @@
+//use M5 lib or use Adafruit NeoPixel
 //#define M5
+//scan wifi channels 1, 6, 11, 14 and ble or just wifi (code taken from j.hewitt)
+//#define TYPEB
+
 #ifdef M5
 #include "M5Atom.h"
 #else
@@ -12,14 +16,127 @@
 #include <TinyGPS++.h>
 
 TinyGPSPlus gps;
+
+#ifdef TYPEB
+//copied from j.hewitt rev3
+
+#include <BLEDevice.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
+
+BLEScan* pBLEScan;
+
+#define mac_history_len 256
+
+struct mac_addr {
+  unsigned char bytes[6];
+};
+
+struct mac_addr mac_history[mac_history_len];
+unsigned int mac_history_cursor = 0;
+
+void save_mac(unsigned char* mac) {
+  if (mac_history_cursor >= mac_history_len) {
+    mac_history_cursor = 0;
+  }
+  struct mac_addr tmp;
+  for (int x = 0; x < 6 ; x++) {
+    tmp.bytes[x] = mac[x];
+  }
+
+  mac_history[mac_history_cursor] = tmp;
+  mac_history_cursor++;
+}
+
+boolean seen_mac(unsigned char* mac) {
+
+  struct mac_addr tmp;
+  for (int x = 0; x < 6 ; x++) {
+    tmp.bytes[x] = mac[x];
+  }
+
+  for (int x = 0; x < mac_history_len; x++) {
+    if (mac_cmp(tmp, mac_history[x])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void print_mac(struct mac_addr mac) {
+  for (int x = 0; x < 6 ; x++) {
+    Serial.print(mac.bytes[x], HEX);
+    Serial.print(":");
+  }
+}
+
+boolean mac_cmp(struct mac_addr addr1, struct mac_addr addr2) {
+  for (int y = 0; y < 6 ; y++) {
+    if (addr1.bytes[y] != addr2.bytes[y]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void clear_mac_history() {
+  struct mac_addr tmp;
+  for (int x = 0; x < 6 ; x++) {
+    tmp.bytes[x] = 0;
+  }
+
+  for (int x = 0; x < mac_history_len; x++) {
+    mac_history[x] = tmp;
+  }
+
+  mac_history_cursor = 0;
+}
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+      unsigned char mac_bytes[6];
+      int values[6];
+
+      if (6 == sscanf(advertisedDevice.getAddress().toString().c_str(), "%x:%x:%x:%x:%x:%x%*c", &values[0], &values[1], &values[2], &values[3], &values[4], &values[5])) {
+        for (int i = 0; i < 6; ++i ) {
+          mac_bytes[i] = (unsigned char) values[i];
+        }
+
+        if (!seen_mac(mac_bytes)) {
+          save_mac(mac_bytes);
+
+          //Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+          char utc[20];
+          sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d",
+                  gps.date.year(), gps.date.month(), gps.date.day(),
+                  gps.time.hour(), gps.time.minute(), gps.time.second());
+          float lat = gps.location.lat();
+          float lon = gps.location.lng();
+          float altitude = gps.altitude.meters();
+          float accuracy = gps.hdop.hdop();
+
+          String out = advertisedDevice.getAddress().toString().c_str() + String(",") + advertisedDevice.getName().c_str() + String(",") + "[BLE]," + utc + String(",0,") + String(advertisedDevice.getRSSI()) + String(",") + String(lat, 6) + String(",") + String(lon, 6) + String(",") + String(altitude, 2) + String(",") + String(accuracy, 2) + String(",BLE");
+          logData(out);
+        }
+      }
+    }
+};
+
+boolean sd_lock = false; //Set to true when writting to sd card
+
+void await_sd() {
+  while (sd_lock) {
+    Serial.println("await");
+    delay(1);
+  }
+}
+#endif
+
 String fileName;
 
 #ifdef M5
 #else
 Adafruit_NeoPixel led = Adafruit_NeoPixel(1, 27, NEO_GRB + NEO_KHZ800);
 #endif
-
-
 
 const int maxMACs = 75;
 String macAddressArray[maxMACs];
@@ -78,6 +195,20 @@ void setup() {
   waitForGPSFix();
 
   initializeFile();
+
+#ifdef TYPEB
+  Serial.println("Setting up Bluetooth scanning");
+  BLEDevice::init("");
+  pBLEScan = BLEDevice::getScan(); //create new scan
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(false); //active scan uses more power, but get results faster
+  pBLEScan->setInterval(50);
+  pBLEScan->setWindow(40);  // less or equal setInterval value
+
+  Serial.println("M5 Atom GPS Wigler (Type B) started!");
+#else
+  Serial.println("M5 Atom GPS Wigler (Type A) started!");
+#endif
 }
 
 void waitForGPSFix() {
@@ -147,6 +278,10 @@ void initializeFile() {
   }
 }
 
+#ifdef TYBEB
+int wifi_scan_channel = 1; //The channel to scan (increments automatically)
+#endif
+
 void loop() {
   while (Serial1.available() > 0) {
     gps.encode(Serial1.read());
@@ -174,26 +309,59 @@ void loop() {
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d",
             gps.date.year(), gps.date.month(), gps.date.day(),
             gps.time.hour(), gps.time.minute(), gps.time.second());
-    //scanNetworks(bool async, bool show_hidden, bool passive, uint32_t max_ms_per_chan)
-    int numNetworks = WiFi.scanNetworks(false, true, false, 110);  //credit J.Hewitt
+
+#ifdef TYPEB
+    BLEScanResults foundDevices = pBLEScan->start(2.5, false);
+    Serial.print("Devices found: ");
+    Serial.println(mac_history_cursor);
+    Serial.println("Scan done!");
+    pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
+#endif
+
     int savedNetworks = 0;
-    for (int i = 0; i < numNetworks; i++) {
-      String currentMAC = WiFi.BSSIDstr(i);
-      if (isMACSeen(currentMAC)) {
-        continue;
+#ifdef TYPEB
+    for (int y = 0; y < 4; y++) {
+      switch (wifi_scan_channel) {
+        case 1:
+          wifi_scan_channel = 6;
+          break;
+        case 6:
+          wifi_scan_channel = 11;
+          break;
+        case 11:
+          wifi_scan_channel = 14;
+          break;
+        default:
+          wifi_scan_channel = 1;
       }
-      macAddressArray[macArrayIndex++] = currentMAC;
-      if (macArrayIndex >= maxMACs) macArrayIndex = 0;
+#endif
 
-      String ssid = "\"" + WiFi.SSID(i) + "\"";  //sanitize SSID
-      String capabilities = getAuthType(WiFi.encryptionType(i));
-      int channel = WiFi.channel(i);
-      int rssi = WiFi.RSSI(i);
+      //scanNetworks(bool async, bool show_hidden, bool passive, uint32_t max_ms_per_chan)
+#ifdef TYPEB
+      int numNetworks = WiFi.scanNetworks(false, true, false, 110, wifi_scan_channel);  //credit J.Hewitt
+#else
+      int numNetworks = WiFi.scanNetworks(false, true, false, 110);  //credit J.Hewitt
+#endif
+      for (int i = 0; i < numNetworks; i++) {
+        String currentMAC = WiFi.BSSIDstr(i);
+        if (isMACSeen(currentMAC)) {
+          continue;
+        }
+        macAddressArray[macArrayIndex++] = currentMAC;
+        if (macArrayIndex >= maxMACs) macArrayIndex = 0;
 
-      String dataString = currentMAC + "," + ssid + "," + capabilities + "," + utc + "," + String(channel) + "," + String(rssi) + "," + String(lat, 6) + "," + String(lon, 6) + "," + String(altitude, 2) + "," + String(accuracy, 2) + ",WIFI";
+        String ssid = "\"" + WiFi.SSID(i) + "\"";  //sanitize SSID
+        String capabilities = getAuthType(WiFi.encryptionType(i));
+        int channel = WiFi.channel(i);
+        int rssi = WiFi.RSSI(i);
 
-      savedNetworks += logData(dataString);
+        String dataString = currentMAC + "," + ssid + "," + capabilities + "," + utc + "," + String(channel) + "," + String(rssi) + "," + String(lat, 6) + "," + String(lon, 6) + "," + String(altitude, 2) + "," + String(accuracy, 2) + ",WIFI";
+
+        savedNetworks += logData(dataString);
+      }
+#ifdef TYPEB
     }
+#endif
     if (savedNetworks > 0) {
 #ifdef M5
       M5.dis.drawpix(0, 0x0000ff); // Blue LED for successful write
@@ -233,6 +401,16 @@ bool isMACSeen(const String& mac) {
 }
 
 int logData(const String& data) {
+#ifdef TYPEB
+  await_sd();
+  sd_lock = true;
+  int i = logData1(data);
+  sd_lock = false;
+  return i;
+}
+
+int logData1(const String& data) {
+#endif
   File dataFile = SD.open(fileName, FILE_APPEND);
   if (dataFile) {
     dataFile.println(data);

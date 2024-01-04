@@ -51,8 +51,8 @@ void setup() {
 #ifdef M5
         M5.dis.drawpix(0, ledState ? 0xff0000 : 0x000000);  // Toggle red LED
 #else
-		led.setPixelColor(0, ledState ? 0xff0000 : 0x000000); // Flash Red if TF card is missing
-		led.show();
+        led.setPixelColor(0, ledState ? 0xff0000 : 0x000000); // Flash Red if TF card is missing
+        led.show();
 #endif
       }
     }
@@ -98,8 +98,8 @@ void waitForGPSFix() {
 #ifdef M5
       M5.dis.drawpix(0, ledState ? 0x800080 : 0x000000);  // Toggle purple LED
 #else
-	  led.setPixelColor(0, ledState ? 0x800080 : 0x000000);
-	  led.show();
+      led.setPixelColor(0, ledState ? 0x800080 : 0x000000);
+      led.show();
 #endif
     }
   }
@@ -155,12 +155,12 @@ void loop() {
   if (gps.location.isValid()) {
 #ifdef M5
     M5.dis.drawpix(0, 0x00ff00);
-    delay(180);  // scan delay 
+    delay(180);  // scan delay
     M5.dis.clear();
 #else
     led.setPixelColor(0, 0x00ff00);
     led.show();
-    delay(180);  // scan delay 
+    delay(180);  // scan delay
     led.setPixelColor(0, 0x000000);
     led.show();
 #endif
@@ -176,26 +176,41 @@ void loop() {
             gps.time.hour(), gps.time.minute(), gps.time.second());
     //scanNetworks(bool async, bool show_hidden, bool passive, uint32_t max_ms_per_chan)
     int numNetworks = WiFi.scanNetworks(false, true, false, 110);  //credit J.Hewitt
+    int savedNetworks = 0;
     for (int i = 0; i < numNetworks; i++) {
       String currentMAC = WiFi.BSSIDstr(i);
-      if (!isMACSeen(currentMAC)) {
-        macAddressArray[macArrayIndex++] = currentMAC;
-        if (macArrayIndex >= maxMACs) macArrayIndex = 0;
-
-        String ssid = "\"" + WiFi.SSID(i) + "\"";  //sanitize SSID
-        String capabilities = getAuthType(WiFi.encryptionType(i));
-        int channel = WiFi.channel(i);
-        int rssi = WiFi.RSSI(i);
-
-        String dataString = currentMAC + "," + ssid + "," + capabilities + "," + utc + "," + String(channel) + "," + String(rssi) + "," + String(lat, 6) + "," + String(lon, 6) + "," + String(altitude, 2) + "," + String(accuracy, 2) + ",WIFI";
-
-        logData(dataString);
+      if (isMACSeen(currentMAC)) {
+        continue;
       }
+      macAddressArray[macArrayIndex++] = currentMAC;
+      if (macArrayIndex >= maxMACs) macArrayIndex = 0;
+
+      String ssid = "\"" + WiFi.SSID(i) + "\"";  //sanitize SSID
+      String capabilities = getAuthType(WiFi.encryptionType(i));
+      int channel = WiFi.channel(i);
+      int rssi = WiFi.RSSI(i);
+
+      String dataString = currentMAC + "," + ssid + "," + capabilities + "," + utc + "," + String(channel) + "," + String(rssi) + "," + String(lat, 6) + "," + String(lon, 6) + "," + String(altitude, 2) + "," + String(accuracy, 2) + ",WIFI";
+
+      savedNetworks += logData(dataString);
+    }
+    if (savedNetworks > 0) {
+#ifdef M5
+      M5.dis.drawpix(0, 0x0000ff); // Blue LED for successful write
+      delay(150);
+      M5.dis.clear();
+#else
+      led.setPixelColor(0, 0x0000ff);
+      led.show();
+      delay(150);
+      led.setPixelColor(0, 0x000000);
+      led.show();
+#endif
     }
   } else {
 #ifdef M5
     M5.dis.drawpix(0, 0x800080);  // Purple LED if waiting for GPS fix
-    delay(500);
+    delay(150);
     M5.dis.clear();  // Clear LED after waiting
 #else
     led.setPixelColor(0, 0x800080);
@@ -204,7 +219,7 @@ void loop() {
     led.setPixelColor(0, 0x000000);
     led.show();
 #endif
-    delay(500);
+    delay(150);
   }
 }
 
@@ -217,23 +232,13 @@ bool isMACSeen(const String& mac) {
   return false;
 }
 
-void logData(const String& data) {
+int logData(const String& data) {
   File dataFile = SD.open(fileName, FILE_APPEND);
   if (dataFile) {
     dataFile.println(data);
     dataFile.close();
-#ifdef M5
-    M5.dis.drawpix(0, 0x0000ff); // Blue LED for successful write
-    delay(150);
-    M5.dis.clear();
-#else
-    led.setPixelColor(0, 0x0000ff);
-    led.show();
-    delay(150);
-    led.setPixelColor(0, 0x000000);
-    led.show();
-#endif
     // Serial.println("Data written: " + data);
+    return 1;
   } else {
     Serial.println("Error opening " + fileName);
 #ifdef M5
@@ -248,6 +253,7 @@ void logData(const String& data) {
     led.show();
 #endif
     delay(500);
+    return 0;
   }
 }
 

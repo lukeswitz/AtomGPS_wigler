@@ -1,7 +1,14 @@
 //use M5 lib or use Adafruit NeoPixel
 //#define M5
+
+#define NO_OF_NODES 2
+#define NODE_ID 1
+
+#if NODE_ID==1
+#elif NODE_ID==2
 //scan wifi channels 1, 6, 11, 14 and ble or just wifi (code taken from j.hewitt)
-//#define TYPEB
+#define TYPEB
+#endif
 
 #ifdef M5
 #include "M5Atom.h"
@@ -16,6 +23,8 @@
 #include <TinyGPS++.h>
 
 TinyGPSPlus gps;
+
+
 
 #ifdef TYPEB
 //copied from j.hewitt rev3
@@ -91,6 +100,7 @@ void clear_mac_history() {
 
   mac_history_cursor = 0;
 }
+
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
       unsigned char mac_bytes[6];
@@ -114,7 +124,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
           float altitude = gps.altitude.meters();
           float accuracy = gps.hdop.hdop();
 
-          String out = advertisedDevice.getAddress().toString().c_str() + String(",") + advertisedDevice.getName().c_str() + String(",") + "[BLE]," + utc + String(",0,") + String(advertisedDevice.getRSSI()) + String(",") + String(lat, 6) + String(",") + String(lon, 6) + String(",") + String(altitude, 2) + String(",") + String(accuracy, 2) + String(",BLE");
+          String out = advertisedDevice.getAddress().toString().c_str() + String(",") + advertisedDevice.getName().c_str() + String(",") + "[BLE]," + utc + String(",") + String("0") + String(",") + String(advertisedDevice.getRSSI()) + String(",") + String(lat, 6) + String(",") + String(lon, 6) + String(",") + String(altitude, 2) + String(",") + String(accuracy, 2) + String(",") + String("BLE");
           logData(out);
         }
       }
@@ -260,7 +270,11 @@ void initializeFile() {
           gps.date.year(), gps.date.month(), gps.date.day());
 
   do {
+#if NO_OF_NODES > 1
+    fileName = String("/") + String(NODE_ID) + "-wifi-scans-" + String(fileDateStamp) + String(fileNumber) + ".csv";
+#else
     fileName = "/wifi-scans-" + String(fileDateStamp) + String(fileNumber) + ".csv";
+#endif
     isNewFile = !SD.exists(fileName);
     fileNumber++;
   } while (!isNewFile);
@@ -355,7 +369,7 @@ void loop() {
         int channel = WiFi.channel(i);
         int rssi = WiFi.RSSI(i);
 
-        String dataString = currentMAC + "," + ssid + "," + capabilities + "," + utc + "," + String(channel) + "," + String(rssi) + "," + String(lat, 6) + "," + String(lon, 6) + "," + String(altitude, 2) + "," + String(accuracy, 2) + ",WIFI";
+        String dataString = currentMAC + String(",") + ssid + String(",") + capabilities + String(",") + utc + String(",") + String(channel) + String(",") + String(rssi) + String(",") + String(lat, 6) + String(",") + String(lon, 6) + String(",") + String(altitude, 2) + String(",") + String(accuracy, 2) + ",WIFI";
 
         savedNetworks += logData(dataString);
       }

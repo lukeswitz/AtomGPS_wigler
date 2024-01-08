@@ -278,7 +278,7 @@ void initializeFile() {
   }
 }
 
-#ifdef TYBEB
+#ifdef TYPEB
 int wifi_scan_channel = 1; //The channel to scan (increments automatically)
 #endif
 

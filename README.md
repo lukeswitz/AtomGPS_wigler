@@ -21,6 +21,7 @@ git clone https://github.com/lukeswitz/AtomGPS_wigler.git
       - esp32 boards (2.0.13) and the M5Atom (any) library. [Installation Docs](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html). 
 - Open the .ino file in the IDE
 - Set Board: esp32 > M5Stack-Atom
+- Select Partition Scheme: Minimal SPIFFS (Large APPS with OTA)
 - Select your device port from the dropdown and press Upload/Flash
 
 ### Method 2: Esptool

@@ -38,6 +38,7 @@ void setup() {
   while (!SD.begin()) {
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);  // will hang here until SD is readable
+    delay(500);
   }
   Serial.println("SD Card initialized.");
 
@@ -53,16 +54,13 @@ void setup() {
 }
 
 void loop() {
-  // Non-blocking blinks
   static unsigned long lastBlinkTime = 0;
-  const unsigned long blinkInterval = 3000;  // GPS fix LED delay
+  const unsigned long blinkInterval = 3000;
 
   M5.update();
 
   if (M5.Btn.wasPressed()) {
     buttonLedState = !buttonLedState;
-    M5.dis.drawpix(0, buttonLedState ? BLUE : OFF);  // flash blue when toggled on
-    delay(80);
   }
 
   while (Serial1.available() > 0) {
@@ -86,7 +84,7 @@ void loop() {
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
     // Dynamic async per-channel scanning
     for (int channel = 1; channel <= 14; channel++) {
-      int numNetworks = WiFi.scanNetworks(true, true, false, timePerChannel[channel - 1], channel);
+      int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
         strcpy(currentMAC, WiFi.BSSIDstr(i).c_str());
@@ -94,9 +92,8 @@ void loop() {
           strcpy(macAddressArray[macArrayIndex++], currentMAC);
           if (macArrayIndex >= maxMACs) macArrayIndex = 0;
           char dataString[300];
-          snprintf(dataString, sizeof(dataString), "%s,\"%s\",%s,%s,%d,%d,%.6f,%.6f,%.2f,%.2f,WIFI", currentMAC, WiFi.SSID(i).c_str(), getAuthType(WiFi.encryptionType(i)), utc, WiFi.channel(i), WiFi.RSSI(i), WiFi.RSSI(i), lat, lon, altitude, accuracy);
+          snprintf(dataString, sizeof(dataString), "%s,\"%s\",%s,%s,%d,%d,%.6f,%.6f,%.2f,%.2f,WIFI", currentMAC, WiFi.SSID(i).c_str(), getAuthType(WiFi.encryptionType(i)), utc, WiFi.channel(i), WiFi.RSSI(i), lat, lon, altitude, accuracy);
           logData(dataString);
-          macArrayIndex = (macArrayIndex + 1) % maxMACs;
         }
       }
       // Update the scan duration for this channel based on the results

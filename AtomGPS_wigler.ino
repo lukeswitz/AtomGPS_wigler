@@ -35,7 +35,7 @@ void setup() {
   Serial.println("Starting...");
   M5.begin(true, false, true);
   SPI.begin(23, 33, 19, -1);  // investigate the -1 assignment and esp32 boards
-  while (!SD.begin(-1, SPI, 40000000)) {
+  while (!SD.begin()) {
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);  // will hang here until SD is readable
   }

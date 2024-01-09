@@ -46,4 +46,4 @@ After flashing, the device starts scanning for Wi-Fi networks, indicating the st
 - Purple Blink: Waiting for GPS fix.
 - Green Blink: Scanning networks.
 - Red Blink: SD card error.
-- _Toggle the LED on/off during scans using the button (only during scanning will it register, showing a quick blue flash when enabled)_
+- _Toggle the LED on/off during scans using the button (only during scanning will it register)_

@@ -34,11 +34,11 @@ git clone https://github.com/lukeswitz/AtomGPS_wigler.git
   ```
    - On Windows, check COM port in Device Manager.
 
-- Flash the firmware .bin version of your choice: 
+   - Flash the desired firmware .bin from buld folder: 
 
    ```bash
-esptool.py --chip esp32 --port [PORT] --baud 115200 write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x10000 [FIRMWARE_FILE]
-```
+   esptool.py --chip esp32 --port [PORT] --baud 115200 write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x10000 [FIRMWARE_FILE]
+   ```
 
 Replace `[PORT]` with your device's port and `[FIRMWARE_FILE]` with the firmware file.
 

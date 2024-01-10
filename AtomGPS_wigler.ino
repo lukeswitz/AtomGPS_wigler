@@ -20,7 +20,7 @@ bool buttonLedState = true;
 // GPS and Filesys
 TinyGPSPlus gps;
 char fileName[50];
-const int maxMACs = 400;  // TESTING: buffer size
+const int maxMACs = 150;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
 
@@ -38,7 +38,7 @@ void setup() {
   while (!SD.begin()) {
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);  // will hang here until SD is readable
-    delay(500);
+    delay(1000);
   }
   Serial.println("SD Card initialized.");
 
@@ -102,6 +102,7 @@ void loop() {
   } else {
     blinkLED(PURPLE, 500);
   }
+  delay(150); // let GPS cactch up
 }
 
 void blinkLED(uint32_t color, unsigned long interval) {

@@ -34,7 +34,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
   M5.begin(true, false, true);
-  SPI.begin(23, 33, 19, -1);  // investigate the -1 assignment and esp32 boards
+  SPI.begin(23, 33, 19, -1);              // investigate the -1 assignment and esp32 boards
   while (!SD.begin(-1, SPI, 40000000)) {  // params throw a bunch of gpio warnings, TODO
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);  // will hang here until SD is readable
@@ -102,7 +102,7 @@ void loop() {
   } else {
     blinkLED(PURPLE, 500);
   }
-  delay(150); // let GPS cactch up
+  delay(150);  // let GPS cactch up
 }
 
 void blinkLED(uint32_t color, unsigned long interval) {
@@ -199,9 +199,9 @@ const char* getAuthType(uint8_t wifiAuth) {
 // TESTING: algo for timePerChan
 void updateTimePerChannel(int channel, int networksFound) {
   const int FEW_NETWORKS_THRESHOLD = 1;
-  const int MANY_NETWORKS_THRESHOLD = 5;
+  const int MANY_NETWORKS_THRESHOLD = 10;
   const int TIME_INCREMENT = 50;  // how many ms to adjust by
-  const int MAX_TIME = 400;
+  const int MAX_TIME = 500;
   const int MIN_TIME = 100;
 
   if (networksFound >= MANY_NETWORKS_THRESHOLD) {

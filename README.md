@@ -1,7 +1,9 @@
 # AtomGPS Wigler
 
 ## Overview
-AtomGPS_wigler is a wardriving tool **created by @lozaning** using the M5Stack Atom GPS kit. The goal is a lightweight and ultra-portable wardriver suitable for set-and-forget operation. Scans learn from eachother, and auto-adjust to popular channels on each run. Output is saved to Wigle.net compatible .CSV files.
+AtomGPS_wigler is a wardriving tool **created by @lozaning** using the M5Stack Atom GPS kit. The goal is a lightweight and ultra-portable wardriver suitable for set-and-forget operation. 
+
+Scans "learn" and auto-adjust to popular channels around you. Output is saved to Wigle.net compatible .CSV files.
 
 ## Prerequisites
 - M5Stack Atom GPS Kit
@@ -22,6 +24,7 @@ git clone https://github.com/lukeswitz/AtomGPS_wigler.git
 - Open the .ino file in the IDE
 - Set Board: esp32 > M5Stack-Core-ESP32
 - Select your device port from the dropdown and press Upload/Flash
+- _Note: Users have reported flashing using DIO instead of QIO and 40MHz instead of 80MHz resolving flashing problems._
 ---
 
 ### Method 2: Esptool
@@ -34,9 +37,9 @@ git clone https://github.com/lukeswitz/AtomGPS_wigler.git
   ```
    - On Windows, check COM port in Device Manager.
 
-   - Flash the desired firmware .bin from buld folder: 
+- Flash the desired firmware .bin from buld folder:
 
-   ```bash
+ ```bash
    esptool.py --chip esp32 --port [PORT] --baud 115200 write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x10000 [FIRMWARE_FILE]
    ```
 

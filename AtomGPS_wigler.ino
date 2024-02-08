@@ -28,7 +28,7 @@ int macArrayIndex = 0;
 const int popularChannels[] = { 1, 6, 11 };
 const int standardChannels[] = { 2, 3, 4, 5, 7, 8, 9, 10 };
 const int rareChannels[] = { 12, 13, 14 };  // Depending on region
-int timePerChannel[14] = { 300, 200, 200, 200, 200, 300, 200, 200, 200, 200, 300, 200, 200, 200 };
+int timePerChannel[14] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 50, 50, 50 }; // min 50 max 500ms
 
 void setup() {
   Serial.begin(115200);
@@ -65,9 +65,9 @@ void loop() {
   }
 
   if (gps.location.isValid()) {
-    // Use crap
+    // Block for 80ms if enabled
     if (buttonLedState == true) {
-      M5.dis.drawpix(0, GREEN);  // Flash green without a static blink
+      M5.dis.drawpix(0, GREEN);  // Flash green
       delay(80);
       M5.dis.clear();
     }
@@ -78,7 +78,7 @@ void loop() {
     float accuracy = gps.hdop.hdop();
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
-    // Dynamic async per-channel scanning
+    // scan hidden, adaptive channel dwell times
     for (int channel = 1; channel <= 14; channel++) {
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
@@ -92,8 +92,7 @@ void loop() {
           logData(dataString);
         }
       }
-      // Update the scan duration for this channel based on the results
-      updateTimePerChannel(channel, numNetworks);
+      updateTimePerChannel(channel, numNetworks); // comment this out to use the static settings above
     }
   } else {
     blinkLED(PURPLE, 250);
@@ -200,37 +199,17 @@ bool findInArray(int value, const int* array, int size) {
   return false;
 }
 
-// TESTING: algo for timePerChan
-void updateTimePerChannel(int channel, int networksFound) {
+void updateTimePerChannel(int channel, int networksFound) { // BETA feature
   const int FEW_NETWORKS_THRESHOLD = 1;
-  const int MANY_NETWORKS_THRESHOLD = 8;
-  const int POPULAR_TIME_INCREMENT = 75;   // Higher increment for popular channels
-  const int STANDARD_TIME_INCREMENT = 50;  // Standard increment
-  const int RARE_TIME_INCREMENT = 30;      // Lower increment for rare channels
-  const int MAX_TIME = 500;
+  const int MANY_NETWORKS_THRESHOLD = 5;
+  const int TIME_INCREMENT = 50;
+  const int MAX_TIME = 300;
   const int MIN_TIME = 50;
 
-  int timeIncrement;
-
-  // Determine the time increment based on channel type
-  if (findInArray(channel, popularChannels, sizeof(popularChannels) / sizeof(popularChannels[0]))) {
-    timeIncrement = POPULAR_TIME_INCREMENT;
-  } else if (findInArray(channel, rareChannels, sizeof(rareChannels) / sizeof(rareChannels[0]))) {
-    timeIncrement = RARE_TIME_INCREMENT;
-  } else {
-    timeIncrement = STANDARD_TIME_INCREMENT;
-  }
-
-  // Adjust the time per channel based on the number of networks found
+  // Adjust time based on the number of networks found
   if (networksFound >= MANY_NETWORKS_THRESHOLD) {
-    timePerChannel[channel - 1] += timeIncrement;
-    if (timePerChannel[channel - 1] > MAX_TIME) {
-      timePerChannel[channel - 1] = MAX_TIME;
-    }
+    timePerChannel[channel - 1] = min(timePerChannel[channel - 1] + TIME_INCREMENT, MAX_TIME);
   } else if (networksFound <= FEW_NETWORKS_THRESHOLD) {
-    timePerChannel[channel - 1] -= timeIncrement;
-    if (timePerChannel[channel - 1] < MIN_TIME) {
-      timePerChannel[channel - 1] = MIN_TIME;
-    }
+    timePerChannel[channel - 1] = max(timePerChannel[channel - 1] - TIME_INCREMENT, MIN_TIME);
   }
 }

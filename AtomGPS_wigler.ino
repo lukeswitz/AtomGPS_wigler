@@ -170,41 +170,23 @@ void logData(const char* data) {
 const char* getAuthType(uint8_t wifiAuth) {
   switch (wifiAuth) {
     case WIFI_AUTH_OPEN:
-      return "[]";
-      break;
-
+      return "[OPEN]";
     case WIFI_AUTH_WEP:
       return "[WEP]";
-      break;
-
     case WIFI_AUTH_WPA_PSK:
-      return "[WPA]";
-      break;
-
+      return "[WPA_PSK]";
     case WIFI_AUTH_WPA2_PSK:
-      return "[WPA2]";
-      break;
-
+      return "[WPA2_PSK]";
     case WIFI_AUTH_WPA_WPA2_PSK:
-      return "[WPA2]";
-      break;
-
+      return "[WPA_WPA2_PSK]";
     case WIFI_AUTH_WPA2_ENTERPRISE:
-      return "[WPA2]";
-      break;
-
+      return "[WPA2_ENTERPRISE]";
     case WIFI_AUTH_WPA3_PSK:
-      return "[WPA3]";
-      break;
-
+      return "[WPA3_PSK]";
     case WIFI_AUTH_WPA2_WPA3_PSK:
-      return "[WPA3]";
-      break;
-
+      return "[WPA2_WPA3_PSK]";
     case WIFI_AUTH_WAPI_PSK:
-      return "[WAPI]";
-      break;
-
+      return "[WAPI_PSK]";
     default:
       return "[UNDEFINED]";
   }

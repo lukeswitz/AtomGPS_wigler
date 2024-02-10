@@ -32,7 +32,7 @@ int macArrayIndex = 0;
 const int popularChannels[] = { 1, 6, 11 };
 const int standardChannels[] = { 2, 3, 4, 5, 7, 8, 9, 10 };
 const int rareChannels[] = { 12, 13, 14 };  // Depending on region
-int timePerChannel[14] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 50, 50, 50 }; // min 50 max 500ms
+int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 }; // min 50 max 500ms
 
 void setup() {
   Serial.begin(115200);
@@ -101,7 +101,7 @@ void loop() {
   } else {
     blinkLED(PURPLE, 250);
   }
-  delay(75);
+  delay(250); // sub-250ms has diminishing returns in most tests
 }
 
 void blinkLED(uint32_t color, unsigned long interval) {

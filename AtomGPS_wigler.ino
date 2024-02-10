@@ -4,6 +4,9 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
+const String BUILD = "1.4.0b2";
+const String VERSION = "1.4";
+
 // LED
 bool ledState = false;
 bool buttonLedState = true;
@@ -23,6 +26,7 @@ char fileName[50];
 const int maxMACs = 150;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
+
 
 // Network Scanning
 const int popularChannels[] = { 1, 6, 11 };
@@ -136,7 +140,7 @@ void initializeFile() {
   if (isNewFile) {
     File dataFile = SD.open(fileName, FILE_WRITE);
     if (dataFile) {
-      dataFile.println("WigleWifi-1.4,appRelease=1.300000,model=GPS Kit,release=1.100000F+00,device=M5ATOM,display=NONE,board=ESP32,brand=M5");
+      dataFile.println("WigleWifi-1.4,appRelease=" + BUILD + ",model=AtomWigler,release=" + VERSION + ",device=M5ATOMGPS,display=NONE,board=ESP32,brand=M5");
       dataFile.println("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type");
       dataFile.close();
       Serial.println("New file created: " + String(fileName));

@@ -32,7 +32,7 @@ int macArrayIndex = 0;
 const int popularChannels[] = { 1, 6, 11 };
 const int standardChannels[] = { 2, 3, 4, 5, 7, 8, 9, 10 };
 const int rareChannels[] = { 12, 13, 14 };  // Depending on region
-int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 }; // min 50 max 500ms
+int timePerChannel[14] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 50, 50, 50 };  // min 50 max 500ms
 
 void setup() {
   Serial.begin(115200);
@@ -58,6 +58,9 @@ void setup() {
 }
 
 void loop() {
+  static unsigned long lastBlinkTime = 0;
+  const unsigned long blinkInterval = 3000;
+
   M5.update();
   if (M5.Btn.wasPressed()) {
     buttonLedState = !buttonLedState;
@@ -69,11 +72,12 @@ void loop() {
   }
 
   if (gps.location.isValid()) {
-    // Block for 80ms if enabled
-    if (buttonLedState == true) {
+    unsigned long currentMillis = millis();  //get the time here for accurate blinks
+    if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
       M5.dis.drawpix(0, GREEN);  // Flash green
       delay(80);
       M5.dis.clear();
+      lastBlinkTime = currentMillis;
     }
 
     float lat = gps.location.lat();
@@ -83,7 +87,7 @@ void loop() {
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
     // scan hidden, adaptive channel dwell times
-    for (int channel = 1; channel <= 14; channel++) {
+    for (int channel = 1; channel <= 11; channel++) {
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
@@ -96,12 +100,12 @@ void loop() {
           logData(dataString);
         }
       }
-      updateTimePerChannel(channel, numNetworks); // comment this out to use the static settings above
+      updateTimePerChannel(channel, numNetworks);  // comment this out to use the static settings above
     }
   } else {
     blinkLED(PURPLE, 250);
   }
-  delay(250); // sub-250ms has diminishing returns in most tests
+  delay(25); // scan delay, change as needed
 }
 
 void blinkLED(uint32_t color, unsigned long interval) {
@@ -203,7 +207,7 @@ bool findInArray(int value, const int* array, int size) {
   return false;
 }
 
-void updateTimePerChannel(int channel, int networksFound) { // BETA feature
+void updateTimePerChannel(int channel, int networksFound) {  // BETA feature
   const int FEW_NETWORKS_THRESHOLD = 1;
   const int MANY_NETWORKS_THRESHOLD = 5;
   const int TIME_INCREMENT = 50;

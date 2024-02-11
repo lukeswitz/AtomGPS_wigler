@@ -32,7 +32,7 @@ int macArrayIndex = 0;
 const int popularChannels[] = { 1, 6, 11 };
 const int standardChannels[] = { 2, 3, 4, 5, 7, 8, 9, 10 };
 const int rareChannels[] = { 12, 13, 14 };  // Depending on region
-int timePerChannel[14] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 50, 50, 50 };  // min 50 max 500ms
+int timePerChannel[14] = { 200, 100, 100, 100, 100, 200, 100, 100, 100, 100, 200, 50, 50, 50 };  // min 50 max 500ms
 
 void setup() {
   Serial.begin(115200);
@@ -87,7 +87,7 @@ void loop() {
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
     // scan hidden, adaptive channel dwell times
-    for (int channel = 1; channel <= 11; channel++) {
+    for (int channel = 1; channel <= 14; channel++) {
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];

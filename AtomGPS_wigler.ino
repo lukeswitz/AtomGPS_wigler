@@ -4,7 +4,7 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.4.0b2";
+const String BUILD = "1.4.0b3";
 const String VERSION = "1.4";
 
 // LED
@@ -27,19 +27,15 @@ const int maxMACs = 150;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
 
-
 // Network Scanning
-const int popularChannels[] = { 1, 6, 11 };
-const int standardChannels[] = { 2, 3, 4, 5, 7, 8, 9, 10 };
-const int rareChannels[] = { 12, 13, 14 };  // Depending on region
-int timePerChannel[14] = { 200, 100, 100, 100, 100, 200, 100, 100, 100, 100, 200, 50, 50, 50 };  // min 50 max 500ms
+int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 };  // min 50 max 500ms
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
   M5.begin(true, false, true);
   SPI.begin(23, 33, 19, -1);              // investigate the -1 assignment and esp32 boards
-  while (!SD.begin(15, SPI, 40000000)) {  // assign pin 15 credit: @hmax42
+  while (!SD.begin(15, SPI, 40000000)) {  // assign pin 15 by @hmax42
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);  // will hang here until SD is readable
     delay(1000);
@@ -105,7 +101,7 @@ void loop() {
   } else {
     blinkLED(PURPLE, 250);
   }
-  delay(25); // scan delay, change as needed
+  delay(150);  // scan delay, change as needed
 }
 
 void blinkLED(uint32_t color, unsigned long interval) {
@@ -211,7 +207,7 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature
   const int FEW_NETWORKS_THRESHOLD = 1;
   const int MANY_NETWORKS_THRESHOLD = 5;
   const int TIME_INCREMENT = 50;
-  const int MAX_TIME = 300;
+  const int MAX_TIME = 400;
   const int MIN_TIME = 50;
 
   // Adjust time based on the number of networks found

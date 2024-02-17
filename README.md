@@ -45,20 +45,23 @@ Detailed review and instructions for beginners | *Thanks to kampf for the writeu
 
 **1. Open **the .ino file** in Arduino IDE (or copy and paste it into a new sketch).**
 
-**2. Add the ESP32 Boards Repo:**
+**2. Add & Install ESP32 Boards:**
    
    -  Open Arduino IDE.
    -  Go to `File > Preferences`.
    -  Add `https://dl.espressif.com/dl/package_esp32_index.json` to "Additional Boards Manager URLs."
    -  Click `OK`.
    -  Navigate to `Tools > Board > Boards Manager`.
-   -  Search for "esp32" and click `Install` for "esp32 by Espressif Systems." as shown below:
-     <img width="213" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/8b1c22f6-5721-4fad-b9e6-9464a8fe70e2">
+   -  Search for "esp32" and search for "esp32 by Espressif Systems" and  click `Install`
+
+   <img width="213" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/8b1c22f6-5721-4fad-b9e6-9464a8fe70e2">
+
 
 **3. Add the M5Atom Library:**
-   - `Library Manager` > search for "M5Atom".
-    <img width="198" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/949ed242-9b43-44ed-a2fe-160cadb20d3d">
-   - Click `Install`. 
+   - `Library Manager` > search for "M5Atom". Click `Install`. 
+
+   <img width="198" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/949ed242-9b43-44ed-a2fe-160cadb20d3d">
+
 
 > [!IMPORTANT]
 > Update outdated Arduino boards and libraries. Version numbers will change with time.

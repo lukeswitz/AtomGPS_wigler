@@ -3,7 +3,7 @@
 ## Overview
 **AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning) for use with the M5Stack Atom GPS kit.
 
-This tool is specifically designed for Wi-Fi network scanning and includes LED status indicators. It offers features such as dynamic channel hopping and deduplication. Writes CSV files compatible with wigle.net.
+This tool is specifically designed for Wi-Fi network scanning. LED status indicators are outlined below. Writes wigle.net compatible CSV files to thw SD card.
 
 ### Feedback & Community
 
@@ -52,18 +52,16 @@ Detailed review and instructions for beginners | *Thanks to kampf for the writeu
    -  Add `https://dl.espressif.com/dl/package_esp32_index.json` to "Additional Boards Manager URLs."
    -  Click `OK`.
    -  Navigate to `Tools > Board > Boards Manager`.
-   -  Search for "esp32" and click `Install` for "esp32 by Espressif Systems." as shown below.
+   -  Search for "esp32" and click `Install` for "esp32 by Espressif Systems." as shown below:
+     <img width="213" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/8b1c22f6-5721-4fad-b9e6-9464a8fe70e2">
 
 **3. Add the M5Atom Library:**
-   - `Library Manager` > search for "M5Atom". 
+   - `Library Manager` > search for "M5Atom".
+    <img width="198" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/949ed242-9b43-44ed-a2fe-160cadb20d3d">
    - Click `Install`. 
 
 > [!IMPORTANT]
 > Update outdated Arduino boards and libraries. Version numbers will change with time.
-> 
-><img width="213" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/8b1c22f6-5721-4fad-b9e6-9464a8fe70e2">
-
-><img width="198" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/949ed242-9b43-44ed-a2fe-160cadb20d3d">
 
 **4. Set Board: Tools > Board > esp32 > M5Atom**
 

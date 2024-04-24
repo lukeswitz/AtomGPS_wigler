@@ -4,8 +4,8 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.4.0b3";
-const String VERSION = "1.4";
+const String BUILD = "1.5.1";
+const String VERSION = "1.5";
 
 // LED
 bool ledState = false;
@@ -20,49 +20,55 @@ bool buttonLedState = true;
 #define WHITE 0xffffff
 #define OFF 0x000000
 
-// GPS and Filesys
+// Scan & GPS
 TinyGPSPlus gps;
 char fileName[50];
 const int maxMACs = 150;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
-
-// Network Scanning
-int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 };  // min 50 max 500ms
+int timePerChannel[13] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50 };  // change for your region
 
 void setup() {
+  
+  // Init connection & filesys
   Serial.begin(115200);
-  Serial.println("Starting...");
+  Serial.println("Starting AtomWigler...");
   M5.begin(true, false, true);
-  SPI.begin(23, 33, 19, -1);              // investigate the -1 assignment and esp32 boards
-  while (!SD.begin(15, SPI, 40000000)) {  // assign pin 15 by @hmax42
+  SPI.begin(23, 33, 19, -1);
+  while (!SD.begin(15, SPI, 40000000)) {
     Serial.println("SD Card initialization failed! Retrying...");
-    blinkLED(RED, 500);  // will hang here until SD is readable
+    blinkLED(RED, 500);
     delay(1000);
   }
+
   Serial.println("SD Card initialized.");
 
+  //Init WiFi
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
+
   Serial.println("WiFi initialized.");
 
+  //Init GPS
   Serial1.begin(9600, SERIAL_8N1, 22, -1);
   Serial.println("GPS Serial initialized.");
   waitForGPSFix();
-  initializeFile();
+  initializeFile();  //Have fix, write the file and begin scan
 }
 
 void loop() {
   static unsigned long lastBlinkTime = 0;
   const unsigned long blinkInterval = 3000;
 
+  // Button blink toggle
   M5.update();
   if (M5.Btn.wasPressed()) {
     buttonLedState = !buttonLedState;
     delay(50);
   }
 
+  // Scan while we have a fix
   while (Serial1.available() > 0) {
     gps.encode(Serial1.read());
   }
@@ -82,8 +88,8 @@ void loop() {
     float accuracy = gps.hdop.hdop();
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
-    // scan hidden, adaptive channel dwell times
-    for (int channel = 1; channel <= 14; channel++) {
+    // scan hidden, adaptive channel dwell times, chan 1-13
+    for (int channel = 1; channel <= 13; channel++) { 
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
@@ -121,7 +127,7 @@ void waitForGPSFix() {
     if (Serial1.available() > 0) {
       gps.encode(Serial1.read());
     }
-    blinkLED(PURPLE, 250);
+    blinkLED(PURPLE, 350);
   }
   M5.dis.clear();
   Serial.println("GPS fix obtained.");
@@ -191,7 +197,7 @@ const char* getAuthType(uint8_t wifiAuth) {
     case WIFI_AUTH_WAPI_PSK:
       return "[WAPI_PSK]";
     default:
-      return "[UNDEFINED]";
+      return "[UNKNOWN]";
   }
 }
 

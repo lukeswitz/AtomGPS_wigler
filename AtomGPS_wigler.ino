@@ -4,13 +4,12 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.5.1";
+const String BUILD = "1.5.2";
 const String VERSION = "1.5";
 
 // LED
 bool ledState = false;
 bool buttonLedState = true;
-
 #define RED 0xff0000
 #define GREEN 0x00ff00
 #define BLUE 0x0000ff
@@ -26,10 +25,21 @@ char fileName[50];
 const int maxMACs = 150;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
-int timePerChannel[13] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50 };  // change for your region
+int timePerChannel[13] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50 };  // change for your region if needed
+float lat;
+float lon;
+float altitude;
+float accuracy;
+double speed = -1;
 
+// Note: scan times relative to 10mph
+static int stop = 500;
+static int slow = 250;
+static int fast = 150;
+static int uninitialized = 250;
+
+// ------------INIT & LOOP----------------
 void setup() {
-  
   // Init connection & filesys
   Serial.begin(115200);
   Serial.println("Starting AtomWigler...");
@@ -82,14 +92,14 @@ void loop() {
       lastBlinkTime = currentMillis;
     }
 
-    float lat = gps.location.lat();
-    float lon = gps.location.lng();
-    float altitude = gps.altitude.meters();
-    float accuracy = gps.hdop.hdop();
+    lat = gps.location.lat();
+    lon = gps.location.lng();
+    altitude = gps.altitude.meters();
+    accuracy = gps.hdop.hdop();
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
     // scan hidden, adaptive channel dwell times, chan 1-13
-    for (int channel = 1; channel <= 13; channel++) { 
+    for (int channel = 1; channel <= 13; channel++) {
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
@@ -105,11 +115,13 @@ void loop() {
       updateTimePerChannel(channel, numNetworks);  // comment this out to use the static settings above
     }
   } else {
+     speed = -1; // GPS lost, reset speed var
     blinkLED(PURPLE, 250);
   }
-  delay(150);  // scan delay, change as needed
+  delay(*getSpeed(speed));  // speed based delay, tweak as needed
 }
 
+// ------------GPS----------------
 void blinkLED(uint32_t color, unsigned long interval) {
   static unsigned long previousBlinkMillis = 0;
   unsigned long currentMillis = millis();
@@ -133,6 +145,24 @@ void waitForGPSFix() {
   Serial.println("GPS fix obtained.");
 }
 
+const int* getSpeed(double speed) {
+  stop = 500;
+  slow = 250;
+  fast = 150;
+  uninitialized = 150;  // Default if GPS data is not valid yet
+
+  if (speed == -1) {
+    return &uninitialized;
+  } else if (speed < 1) {
+    return &stop;
+  } else if (speed < 10) {
+    return &slow;
+  } else {
+    return &fast;
+  }
+}
+
+// ------------FILESYS ----------------
 void initializeFile() {
   int fileNumber = 0;
   bool isNewFile = false;
@@ -176,6 +206,7 @@ void logData(const char* data) {
   }
 }
 
+// ------------WIFI----------------
 const char* getAuthType(uint8_t wifiAuth) {
   switch (wifiAuth) {
     case WIFI_AUTH_OPEN:
@@ -201,7 +232,6 @@ const char* getAuthType(uint8_t wifiAuth) {
   }
 }
 
-
 bool findInArray(int value, const int* array, int size) {
   for (int i = 0; i < size; i++) {
     if (array[i] == value) return true;
@@ -209,14 +239,13 @@ bool findInArray(int value, const int* array, int size) {
   return false;
 }
 
-void updateTimePerChannel(int channel, int networksFound) {  // BETA feature
+void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
   const int FEW_NETWORKS_THRESHOLD = 1;
   const int MANY_NETWORKS_THRESHOLD = 5;
   const int TIME_INCREMENT = 50;
   const int MAX_TIME = 400;
   const int MIN_TIME = 50;
 
-  // Adjust time based on the number of networks found
   if (networksFound >= MANY_NETWORKS_THRESHOLD) {
     timePerChannel[channel - 1] = min(timePerChannel[channel - 1] + TIME_INCREMENT, MAX_TIME);
   } else if (networksFound <= FEW_NETWORKS_THRESHOLD) {

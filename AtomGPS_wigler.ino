@@ -25,18 +25,16 @@ char fileName[50];
 const int maxMACs = 150;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
-int timePerChannel[13] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50 };  // change for your region if needed
+int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 };  // change for your region
 float lat;
 float lon;
 float altitude;
 float accuracy;
 double speed = -1;
-
-// Note: scan times relative to 10mph
-static int stop = 500;
-static int slow = 250;
-static int fast = 150;
-static int uninitialized = 250;
+static int stop = 1000; // 1s delay while stopped
+static int slow = 400; // 400ms delay < 10mph
+static int fast = 150; // 150ms delay > 10mph
+static int uninitialized = 250; // No GPS fix delay catch
 
 // ------------INIT & LOOP----------------
 void setup() {
@@ -69,7 +67,7 @@ void setup() {
 
 void loop() {
   static unsigned long lastBlinkTime = 0;
-  const unsigned long blinkInterval = 3000;
+  const unsigned long blinkInterval = 2500;
 
   // Button blink toggle
   M5.update();
@@ -87,7 +85,7 @@ void loop() {
     unsigned long currentMillis = millis();  //get the time here for accurate blinks
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
       M5.dis.drawpix(0, GREEN);  // Flash green
-      delay(80);
+      delay(60);
       M5.dis.clear();
       lastBlinkTime = currentMillis;
     }
@@ -96,10 +94,13 @@ void loop() {
     lon = gps.location.lng();
     altitude = gps.altitude.meters();
     accuracy = gps.hdop.hdop();
+    speed = gps.speed.mph();
+
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
-    // scan hidden, adaptive channel dwell times, chan 1-13
-    for (int channel = 1; channel <= 13; channel++) {
+
+    // Scan loop: Defaults (bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, channel, ...)
+    for (int channel = 1; channel <= 14; channel++) {
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
@@ -139,23 +140,19 @@ void waitForGPSFix() {
     if (Serial1.available() > 0) {
       gps.encode(Serial1.read());
     }
-    blinkLED(PURPLE, 350);
+    blinkLED(PURPLE, 300);
   }
   M5.dis.clear();
   Serial.println("GPS fix obtained.");
 }
 
 const int* getSpeed(double speed) {
-  stop = 500;
-  slow = 250;
-  fast = 150;
-  uninitialized = 150;  // Default if GPS data is not valid yet
 
   if (speed == -1) {
     return &uninitialized;
   } else if (speed < 1) {
     return &stop;
-  } else if (speed < 10) {
+  } else if (speed <= 10) {
     return &slow;
   } else {
     return &fast;

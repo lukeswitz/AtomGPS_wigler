@@ -4,7 +4,7 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.5.2";
+const String BUILD = "1.5.3";
 const String VERSION = "1.5";
 
 // LED
@@ -30,10 +30,12 @@ float lat;
 float lon;
 float altitude;
 float accuracy;
+
+// Speed-based scan vars
 double speed = -1;
-static int stop = 1000; // 1s delay while stopped
-static int slow = 400; // 400ms delay < 10mph
-static int fast = 150; // 150ms delay > 10mph
+static int stop = 500; // 1s delay while stopped
+static int slow = 250; // 400ms delay < 15mph
+static int fast = 100; // 150ms delay > 15mph
 static int uninitialized = 250; // No GPS fix delay catch
 
 // ------------INIT & LOOP----------------
@@ -99,7 +101,8 @@ void loop() {
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
 
-    // Scan loop: Defaults (bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, channel, ...)
+   //------------- SET YOUR CHANNEL MAX (11-14) PER REGION/USE CASE -------------//
+    
     for (int channel = 1; channel <= 14; channel++) {
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
@@ -119,7 +122,11 @@ void loop() {
      speed = -1; // GPS lost, reset speed var
     blinkLED(PURPLE, 250);
   }
-  delay(*getSpeed(speed));  // speed based delay, tweak as needed
+  
+  //------------- CHOOSE ONE: SPEED BASED FOR BATTERY, STATIC FOR MAX NETS -------------//
+  
+  //  delay(*getSpeed(speed));  // speed based delay
+  delay(150); // static delay
 }
 
 // ------------GPS----------------
@@ -152,7 +159,7 @@ const int* getSpeed(double speed) {
     return &uninitialized;
   } else if (speed < 1) {
     return &stop;
-  } else if (speed <= 10) {
+  } else if (speed <= 15) {
     return &slow;
   } else {
     return &fast;
@@ -238,9 +245,9 @@ bool findInArray(int value, const int* array, int size) {
 
 void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
   const int FEW_NETWORKS_THRESHOLD = 1;
-  const int MANY_NETWORKS_THRESHOLD = 5;
-  const int TIME_INCREMENT = 50;
-  const int MAX_TIME = 400;
+  const int MANY_NETWORKS_THRESHOLD = 10;
+  const int TIME_INCREMENT = 20;
+  const int MAX_TIME = 100;
   const int MIN_TIME = 50;
 
   if (networksFound >= MANY_NETWORKS_THRESHOLD) {

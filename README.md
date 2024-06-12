@@ -1,18 +1,18 @@
+![GitHub Tag](https://img.shields.io/github/v/tag/lukeswitz/AtomGPS_wigler?label=release&link=!%5BGitHub%20Tag%5D(https%3A%2F%2Fimg.shields.io%2Fgithub%2Fv%2Ftag%2Flukeswitz%2FAtomGPS_wigler))
 # AtomGPS Wigler
 
 ## Overview
-**AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning) for use with the M5Stack Atom GPS kit.
+**AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning). For use with the M5Stack Atom GPS kit, this tool is specifically designed for Wi-Fi network geolocation. LED status indicators are outlined below. [Wigle](wigle.net) compatible CSV files are written to SD.
 
-This tool is specifically designed for Wi-Fi network scanning. LED status indicators are outlined below. Writes wigle.net compatible CSV files to thw SD card.
+### Prerequisites
 
-### Feedback & Community
+- M5 AtomGPS
+- SD card (Formatted FAT32)
+- Arduino IDE or ` Esptool.py`
 
-Detailed review and instructions for beginners | *Thanks to kampf for the writeup:*
-- January 11, 2024: *["Wigle Me This"](https://zzq.org/?p=221)* by zZq.org
----
 
 ## Flashing to AtomGPS
-- **Grab the codebase:**
+- **Download this forked codebase:**
     ```bash
     git clone https://github.com/lukeswitz/AtomGPS_wigler.git
     cd AtomGPS_wigler/build
@@ -21,17 +21,21 @@ Detailed review and instructions for beginners | *Thanks to kampf for the writeu
 ### Method One: [Esptool.py](https://docs.espressif.com/projects/esptool/en/latest/esp32/)
 
 **1. Locate the device:**
-   - Linux/macOS:
-     ```bash
-     ls /dev/ttyUSB*
-     # or
-     ls /dev/cu.*
+-  Linux
      ```
+     ls /dev/ttyUSB*
+     ```
+ - macOS:
+
+   ```
+   ls /dev/cu.*
+    ```
+   
    - Windows, check COM port in Device Manager.
 
 **2. Flash the firmware, partition and bootloader:**
 
-> [!NOTE]
+> [!WARNING]
 > Ensure you have the latest version of esptool.py installed from the link above, or a known warning about header fields will display when flashing.
 
   - Navigate to the build folder (if not already there).   
@@ -53,28 +57,31 @@ Detailed review and instructions for beginners | *Thanks to kampf for the writeu
    -  Click `OK`.
    -  Navigate to `Tools > Board > Boards Manager`.
    -  Search for "esp32" and search for "esp32 by Espressif Systems" and  click `Install`
-
+ 
    <img width="213" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/8b1c22f6-5721-4fad-b9e6-9464a8fe70e2">
 
 
-**3. Add the M5Atom Library:**
-   - `Library Manager` > search for "M5Atom". Click `Install`. 
+**3. Add the Required Libraries:**
+```
+M5Atom
+SD
+SPI
+TinyGPSPlus
+WiFi
+```
+For example:
+   - `Library Manager` > search `M5Atom`. Click `Install`. 
 
    <img width="198" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/949ed242-9b43-44ed-a2fe-160cadb20d3d">
-
-
-> [!IMPORTANT]
-> Update outdated Arduino boards and libraries. Version numbers will change with time.
+    
 
 **4. Set Board: Tools > Board > esp32 > M5Atom**
 
-**5. Ensure the default settings are as below:**
+**5. The default settings are as below:**
 
 <img width="425" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/c9a7ffc9-69f1-44ad-92a2-acf64e64c0bf">
 
 **6. Click Upload**
-
----
 
 ## Get out Wardriving!
 
@@ -89,5 +96,11 @@ After flashing, the device scans for Wi-Fi networks, using LEDs to display statu
 - Network data is saved in Wigle.net-compatible CSV files on the SD card. 
 - ***Bonus: Contribute to the [wigle.net](https://wigle.net) database. Or join the community and compete to find the most Wi-Fi networks.***
 
+### Feedback & Community
+
+Detailed review and instructions for beginners | *Thanks to kampf for the writeup:*
+- January 11, 2024: *["Wigle Me This"](https://zzq.org/?p=221)* by zZq.org
+
+---
 > [!CAUTION]
 > Wardriving may not be legal in all locations. Please check local laws and obtain proper consent where necessary.

@@ -1,4 +1,4 @@
-![GitHub Tag](https://img.shields.io/github/v/tag/lukeswitz/AtomGPS_wigler?label=release&link=https%3A%2F%2Fgithub.com%2Flukeswitz%2FAtomGPS_wigler)
+[![GitHub Tag](https://img.shields.io/github/v/tag/lukeswitz/AtomGPS_wigler?label=release)](https://github.com/lukeswitz/AtomGPS_wigler/releases)
 
 # AtomGPS Wigler
 

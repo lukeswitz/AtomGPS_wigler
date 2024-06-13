@@ -245,9 +245,9 @@ bool findInArray(int value, const int* array, int size) {
 
 void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
   const int FEW_NETWORKS_THRESHOLD = 1;
-  const int MANY_NETWORKS_THRESHOLD = 10;
-  const int TIME_INCREMENT = 20;
-  const int MAX_TIME = 100;
+  const int MANY_NETWORKS_THRESHOLD = 7;
+  const int TIME_INCREMENT = 50;
+  const int MAX_TIME = 500;
   const int MIN_TIME = 50;
 
   if (networksFound >= MANY_NETWORKS_THRESHOLD) {

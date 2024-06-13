@@ -4,8 +4,8 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.5.3";
-const String VERSION = "1.5";
+const String BUILD = "1.6.1";
+const String VERSION = "1.6";
 
 // LED
 bool ledState = false;
@@ -38,7 +38,12 @@ static int slow = 250; // 400ms delay < 15mph
 static int fast = 100; // 150ms delay > 15mph
 static int uninitialized = 250; // No GPS fix delay catch
 
-// ------------INIT & LOOP----------------
+// Configurable vars
+bool speedBased = false;
+int scanDelay = 150;
+bool adaptiveScan = true;
+int channels[11] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; // Channels 1-11
+
 void setup() {
   // Init connection & filesys
   Serial.begin(115200);
@@ -53,18 +58,52 @@ void setup() {
 
   Serial.println("SD Card initialized.");
 
-  //Init WiFi
+  // Read and parse config file
+if (SD.exists("/config.txt")) {
+  File configFile = SD.open("/config.txt");
+  if (configFile) {
+    parseConfigFile(configFile);
+    configFile.close();
+    
+    // Print parsed values
+    Serial.println("Configuration values:");
+    Serial.print("speedBased: ");
+    Serial.println(speedBased ? "true" : "false");
+    Serial.print("scanDelay: ");
+    Serial.println(scanDelay);
+    Serial.print("adaptiveScan: ");
+    Serial.println(adaptiveScan ? "true" : "false");
+    Serial.print("channels: ");
+    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
+      if (channels[i] != 0) { // Print only valid channels
+        Serial.print(channels[i]);
+        if (i < sizeof(channels) / sizeof(channels[0]) - 1 && channels[i+1] != 0) {
+          Serial.print(", ");
+        }
+      } else {
+        break;
+      }
+    }
+    Serial.println();
+  } else {
+    Serial.println("Failed to open config file.");
+  }
+} else {
+  Serial.println("Config file not found.");
+}
+
+  // Init WiFi
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
 
   Serial.println("WiFi initialized.");
 
-  //Init GPS
+  // Init GPS
   Serial1.begin(9600, SERIAL_8N1, 22, -1);
   Serial.println("GPS Serial initialized.");
   waitForGPSFix();
-  initializeFile();  //Have fix, write the file and begin scan
+  initializeFile();  // Have fix, write the file and begin scan
 }
 
 void loop() {
@@ -84,7 +123,7 @@ void loop() {
   }
 
   if (gps.location.isValid()) {
-    unsigned long currentMillis = millis();  //get the time here for accurate blinks
+    unsigned long currentMillis = millis();  // get the time here for accurate blinks
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
       M5.dis.drawpix(0, GREEN);  // Flash green
       delay(60);
@@ -101,9 +140,10 @@ void loop() {
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
 
-   //------------- SET YOUR CHANNEL MAX (11-14) PER REGION/USE CASE -------------//
-    
-    for (int channel = 1; channel <= 14; channel++) {
+    // Use configured channels
+    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
+      int channel = channels[i];
+
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
@@ -116,20 +156,23 @@ void loop() {
           logData(dataString);
         }
       }
-      updateTimePerChannel(channel, numNetworks);  // comment this out to use the static settings above
+      if (adaptiveScan) {
+        updateTimePerChannel(channel, numNetworks);  // Adaptive scan timing
+      }
     }
   } else {
-     speed = -1; // GPS lost, reset speed var
+    speed = -1; // GPS lost, reset speed var
     blinkLED(PURPLE, 250);
   }
-  
-  //------------- CHOOSE ONE: SPEED BASED FOR BATTERY, STATIC FOR MAX NETS -------------//
-  
-  //  delay(*getSpeed(speed));  // speed based delay
-  delay(150); // static delay
+
+  if (speedBased) {
+    delay(*getSpeed(speed));  // Speed based delay
+  } else {
+    delay(scanDelay); // Static delay
+  }
 }
 
-// ------------GPS----------------
+// GPS
 void blinkLED(uint32_t color, unsigned long interval) {
   static unsigned long previousBlinkMillis = 0;
   unsigned long currentMillis = millis();
@@ -154,7 +197,6 @@ void waitForGPSFix() {
 }
 
 const int* getSpeed(double speed) {
-
   if (speed == -1) {
     return &uninitialized;
   } else if (speed < 1) {
@@ -166,7 +208,7 @@ const int* getSpeed(double speed) {
   }
 }
 
-// ------------FILESYS ----------------
+// Filesys
 void initializeFile() {
   int fileNumber = 0;
   bool isNewFile = false;
@@ -210,7 +252,7 @@ void logData(const char* data) {
   }
 }
 
-// ------------WIFI----------------
+// WiFI
 const char* getAuthType(uint8_t wifiAuth) {
   switch (wifiAuth) {
     case WIFI_AUTH_OPEN:
@@ -236,13 +278,6 @@ const char* getAuthType(uint8_t wifiAuth) {
   }
 }
 
-bool findInArray(int value, const int* array, int size) {
-  for (int i = 0; i < size; i++) {
-    if (array[i] == value) return true;
-  }
-  return false;
-}
-
 void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
   const int FEW_NETWORKS_THRESHOLD = 1;
   const int MANY_NETWORKS_THRESHOLD = 7;
@@ -254,5 +289,53 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, ad
     timePerChannel[channel - 1] = min(timePerChannel[channel - 1] + TIME_INCREMENT, MAX_TIME);
   } else if (networksFound <= FEW_NETWORKS_THRESHOLD) {
     timePerChannel[channel - 1] = max(timePerChannel[channel - 1] - TIME_INCREMENT, MIN_TIME);
+  }
+}
+// SD Config
+void parseConfigFile(File file) {
+  char line[64];
+  int lineIndex = 0;
+  while (file.available()) {
+    char c = file.read();
+    if (c == '\n' || c == '\r') {
+      line[lineIndex] = '\0'; // Terminate the string
+      if (lineIndex > 0) {
+        processConfigLine(line);
+      }
+      lineIndex = 0;
+    } else {
+      line[lineIndex++] = c;
+    }
+  }
+  if (lineIndex > 0) {
+    line[lineIndex] = '\0';
+    processConfigLine(line);
+  }
+}
+
+void processConfigLine(const char *line) {
+  char key[32];
+  char value[32];
+  sscanf(line, "%[^=]=%s", key, value);
+
+  if (strcmp(key, "speedBased") == 0) {
+    speedBased = (strcmp(value, "true") == 0);
+  } else if (strcmp(key, "scanDelay") == 0) {
+    scanDelay = atoi(value);
+  } else if (strcmp(key, "adaptiveScan") == 0) {
+    adaptiveScan = (strcmp(value, "true") == 0);
+  } else if (strcmp(key, "channels") == 0) {
+    parseChannels(value);
+  }
+}
+
+void parseChannels(const char *value) {
+  int index = 0;
+  char *token = strtok(const_cast<char*>(value), ",");
+  while (token != NULL) {
+    if (index < sizeof(channels) / sizeof(channels[0])) {
+      channels[index++] = atoi(token);
+    }
+    token = strtok(NULL, ",");
   }
 }

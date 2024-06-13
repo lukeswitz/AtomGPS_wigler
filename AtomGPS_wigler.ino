@@ -343,4 +343,9 @@ void parseChannels(const char* value) {
     }
     token = strtok(NULL, ",");
   }
+  
+  // Clear the rest of the channels array if fewer channels are defined
+  while (index < sizeof(channels) / sizeof(channels[0])) {
+    channels[index++] = 0;
+  }
 }

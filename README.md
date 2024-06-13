@@ -84,7 +84,58 @@ For example:
 
 **6. Click Upload**
 
-## Get out Wardriving!
+## Configuration Instructions
+
+**FIRST: Create a plaintext file named `config.txt` on the SD card.**
+
+The `config.txt` file on the SD card can contain the following variables, each defined on a new line
+
+### Variables
+
+1. **speedBased**
+   - **Type**: Boolean
+   - **Default**: `false`
+   - **Description**: Determines if the scanning delay is based on the speed of the device.
+   - **Values**: `true` or `false`
+   - **Example**: `speedBased=true`
+
+2. **scanDelay**
+   - **Type**: Integer
+   - **Default**: `150`
+   - **Description**: The delay in milliseconds between scans when `speedBased` is `false`.
+   - **Values**: Any positive integer
+   - **Example**: `scanDelay=1000`
+
+3. **adaptiveScan**
+   - **Type**: Boolean
+   - - **Default**: `true`
+   - **Description**: Enables adaptive scanning, adjusting the scan time based on the number of networks found.
+   - **Values**: `true` or `false`
+   - **Example**: `adaptiveScan=false`
+
+4. **channels**
+   - **Type**: Array of Integers
+   - **Default**: `channels=1,2,3,4,5,6,7,8,9,10,11`
+   - **Description**: A comma-separated list of WiFi channels to scan.
+   - **Values**: Any valid WiFi channel numbers (1-11 for most regions)
+   - **Example**: `channels=1,6,11`
+
+### Example `config.txt`
+```
+speedBased=true
+scanDelay=1000
+adaptiveScan=false
+channels=1,2,3,4,5,6,7,8,9,10,11
+```
+
+#### Config Notes
+- Ensure there are no spaces around the `=` sign when defining variables.
+- Only valid channels for your region should be included in the `channels` array to ensure compliance with local regulations.
+- Adjust the `scanDelay` value to balance between scan frequency and power consumption when `speedBased` is set to `false`.
+
+
+
+### Get out Wardriving!
 
 After flashing, the device scans for Wi-Fi networks, using LEDs to display status. Plug it into any usb power source and go:
 **LED Indicators:**

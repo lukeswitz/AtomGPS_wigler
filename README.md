@@ -11,7 +11,6 @@
 - SD card (Formatted FAT32)
 - Arduino IDE or ` Esptool.py`
 
-
 ## Flashing to AtomGPS
 - **Download this forked codebase:**
     ```bash
@@ -61,7 +60,6 @@
  
    <img width="213" alt="image" src="https://github.com/lukeswitz/AtomGPS_wigler/assets/10099969/8b1c22f6-5721-4fad-b9e6-9464a8fe70e2">
 
-
 **3. Add the Required Libraries:**
 ```
 M5Atom
@@ -84,7 +82,9 @@ For example:
 
 **6. Click Upload**
 
-## Configuration Instructions
+---
+
+## SD Configuration
 
 **FIRST: Create a plaintext file named `config.txt` on the SD card.**
 
@@ -108,7 +108,7 @@ The `config.txt` file on the SD card can contain the following variables, each d
 
 3. **adaptiveScan**
    - **Type**: Boolean
-   - - **Default**: `true`
+   - **Default**: `true`
    - **Description**: Enables adaptive scanning, adjusting the scan time based on the number of networks found.
    - **Values**: `true` or `false`
    - **Example**: `adaptiveScan=false`
@@ -122,31 +122,28 @@ The `config.txt` file on the SD card can contain the following variables, each d
 
 ### Example `config.txt`
 ```
-speedBased=true
-scanDelay=1000
-adaptiveScan=false
+speedBased=false
+scanDelay=250
+adaptiveScan=true
 channels=1,2,3,4,5,6,7,8,9,10,11
 ```
 
-#### Config Notes
-- Ensure there are no spaces around the `=` sign when defining variables.
-- Only valid channels for your region should be included in the `channels` array to ensure compliance with local regulations.
-- Adjust the `scanDelay` value to balance between scan frequency and power consumption when `speedBased` is set to `false`.
+> [!NOTE]
+> - Ensure there are no spaces around the `=` sign when defining variables.
+> - Only valid channels for your region should be included in the `channels` array to ensure compliance with local regulations.
+> - Adjust the `scanDelay` value to balance between scan frequency and power consumption when `speedBased` is set to `false`.
 
+## Get out Wardriving!
 
+After flashing, the device scans for Wi-Fi networks, using LEDs to display status. Configure with the SD config.txt file or use the defaults as described.
 
-### Get out Wardriving!
-
-After flashing, the device scans for Wi-Fi networks, using LEDs to display status. Plug it into any usb power source and go:
 **LED Indicators:**
-> [!NOTE]  
->- Press and hold the button during scanning to toggle the Green LED.
 - RED blink if the SD card is missing/write error.
 - PURPLE blink while waiting for a GPS fix.
-- GREEN blink during scanning (toggle by press & hold of button).
-    
-- Network data is saved in Wigle.net-compatible CSV files on the SD card. 
-- ***Bonus: Contribute to the [wigle.net](https://wigle.net) database. Or join the community and compete to find the most Wi-Fi networks.***
+- GREEN blink during scanning
+- **Press and hold the button during scanning to toggle the Green LED.**
+  
+ ***Bonus: Contribute to the [wigle.net](https://wigle.net) database. Or join the community and compete to find the most Wi-Fi networks.***
 
 ### Feedback & Community
 

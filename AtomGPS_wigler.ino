@@ -33,23 +33,26 @@ float accuracy;
 
 // Speed-based scan vars
 double speed = -1;
-static int stop = 500; // 1s delay while stopped
-static int slow = 250; // 400ms delay < 15mph
-static int fast = 100; // 150ms delay > 15mph
-static int uninitialized = 250; // No GPS fix delay catch
+static int stop = 500;           // 1s delay while stopped
+static int slow = 250;           // 400ms delay < 15mph
+static int fast = 100;           // 150ms delay > 15mph
+static int uninitialized = 250;  // No GPS fix delay catch
 
 // Configurable vars
 bool speedBased = false;
 int scanDelay = 150;
 bool adaptiveScan = true;
-int channels[11] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; // Channels 1-11
+int channels[11] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };  // Channels 1-11
 
 void setup() {
   // Init connection & filesys
   Serial.begin(115200);
+  delay(1000);
   Serial.println("Starting AtomWigler...");
   M5.begin(true, false, true);
   SPI.begin(23, 33, 19, -1);
+  delay(1000); // let system catch up
+
   while (!SD.begin(15, SPI, 40000000)) {
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);
@@ -59,38 +62,38 @@ void setup() {
   Serial.println("SD Card initialized.");
 
   // Read and parse config file
-if (SD.exists("/config.txt")) {
-  File configFile = SD.open("/config.txt");
-  if (configFile) {
-    parseConfigFile(configFile);
-    configFile.close();
-    
-    // Print parsed values
-    Serial.println("Configuration values:");
-    Serial.print("speedBased: ");
-    Serial.println(speedBased ? "true" : "false");
-    Serial.print("scanDelay: ");
-    Serial.println(scanDelay);
-    Serial.print("adaptiveScan: ");
-    Serial.println(adaptiveScan ? "true" : "false");
-    Serial.print("channels: ");
-    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
-      if (channels[i] != 0) { // Print only valid channels
-        Serial.print(channels[i]);
-        if (i < sizeof(channels) / sizeof(channels[0]) - 1 && channels[i+1] != 0) {
-          Serial.print(", ");
+  if (SD.exists("/config.txt")) {
+    File configFile = SD.open("/config.txt");
+    if (configFile) {
+      parseConfigFile(configFile);
+      configFile.close();
+
+      // Print parsed values
+      Serial.println("Configuration values:");
+      Serial.print("speedBased: ");
+      Serial.println(speedBased ? "true" : "false");
+      Serial.print("scanDelay: ");
+      Serial.println(scanDelay);
+      Serial.print("adaptiveScan: ");
+      Serial.println(adaptiveScan ? "true" : "false");
+      Serial.print("channels: ");
+      for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
+        if (channels[i] != 0) {  // Print only valid channels
+          Serial.print(channels[i]);
+          if (i < sizeof(channels) / sizeof(channels[0]) - 1 && channels[i + 1] != 0) {
+            Serial.print(", ");
+          }
+        } else {
+          break;
         }
-      } else {
-        break;
       }
+      Serial.println();
+    } else {
+      Serial.println("Failed to open config file.");
     }
-    Serial.println();
   } else {
-    Serial.println("Failed to open config file.");
+    Serial.println("Config file not found.");
   }
-} else {
-  Serial.println("Config file not found.");
-}
 
   // Init WiFi
   WiFi.mode(WIFI_STA);
@@ -101,10 +104,12 @@ if (SD.exists("/config.txt")) {
 
   // Init GPS
   Serial1.begin(9600, SERIAL_8N1, 22, -1);
+  delay(1000);  // Allow time for GPS to initialize
   Serial.println("GPS Serial initialized.");
   waitForGPSFix();
   initializeFile();  // Have fix, write the file and begin scan
 }
+
 
 void loop() {
   static unsigned long lastBlinkTime = 0;
@@ -161,18 +166,18 @@ void loop() {
       }
     }
   } else {
-    speed = -1; // GPS lost, reset speed var
+    speed = -1;  // GPS lost, reset speed var
     blinkLED(PURPLE, 250);
   }
 
   if (speedBased) {
     delay(*getSpeed(speed));  // Speed based delay
   } else {
-    delay(scanDelay); // Static delay
+    delay(scanDelay);  // Static delay
   }
 }
 
-// GPS
+// ------------GPS----------------
 void blinkLED(uint32_t color, unsigned long interval) {
   static unsigned long previousBlinkMillis = 0;
   unsigned long currentMillis = millis();
@@ -298,7 +303,7 @@ void parseConfigFile(File file) {
   while (file.available()) {
     char c = file.read();
     if (c == '\n' || c == '\r') {
-      line[lineIndex] = '\0'; // Terminate the string
+      line[lineIndex] = '\0';  // Terminate the string
       if (lineIndex > 0) {
         processConfigLine(line);
       }
@@ -313,7 +318,7 @@ void parseConfigFile(File file) {
   }
 }
 
-void processConfigLine(const char *line) {
+void processConfigLine(const char* line) {
   char key[32];
   char value[32];
   sscanf(line, "%[^=]=%s", key, value);
@@ -329,9 +334,9 @@ void processConfigLine(const char *line) {
   }
 }
 
-void parseChannels(const char *value) {
+void parseChannels(const char* value) {
   int index = 0;
-  char *token = strtok(const_cast<char*>(value), ",");
+  char* token = strtok(const_cast<char*>(value), ",");
   while (token != NULL) {
     if (index < sizeof(channels) / sizeof(channels[0])) {
       channels[index++] = atoi(token);

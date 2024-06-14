@@ -54,7 +54,7 @@
   - Navigate to the build folder (if not already there).   
   - Flash using the following command **inside the build folder or by specifying file paths:**
 
-`esptool.py -p [YOUR_PORT] -b 1500000 --before default_reset --after hard_reset --chip esp32 write_flash --flash_mode dio --flash_size detect --flash_freq 80m 0x1000 AtomGPS_wigler_v1_5.bootloader.bin 0x8000 AtomGPS_wigler_v1_5.partitions.bin 0x10000 AtomGPS_wigler_v1_5.bin`
+`esptool.py -p [YOUR_PORT] -b 1500000 --before default_reset --after hard_reset --chip esp32 write_flash --flash_mode dio --flash_size detect --flash_freq 80m 0x1000 AtomGPS_wigler_v1_6.bootloader.bin 0x8000 AtomGPS_wigler_v1_6.partitions.bin 0x10000 AtomGPS_wigler_v1_6.bin`
 
 ---
 

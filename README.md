@@ -2,6 +2,19 @@
 
 # AtomGPS Wigler
 
+## Table of Contents
+
+- [Flashing to AtomGPS](#flashing-to-atomgps)
+  - [Method One: Esptool.py](#method-one-esptoolpy)
+  - [Method Two: Arduino IDE](#method-two-arduino-ide)
+- [SD Configuration](#sd-configuration)
+  - [Variables](#variables)
+  - [Example config.txt file](#example-configtxt)
+- [Get out Wardriving!](#get-out-wardriving)
+  - [LED Indicators](#led-indicators)
+- [Feedback & Community](#feedback--community)
+
+
 ## Overview
 **AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning). For use with the M5Stack Atom GPS kit, this tool is specifically designed for Wi-Fi network geolocation. LED status indicators are outlined below. [Wigle](wigle.net) compatible CSV files are written to SD.
 
@@ -45,7 +58,7 @@
 
 ---
 
-### Method 2: [Arduino IDE](https://www.arduino.cc/en/software)
+### Method Two: [Arduino IDE](https://www.arduino.cc/en/software)
 
 **1. Open **the .ino file** in Arduino IDE (or copy and paste it into a new sketch).**
 
@@ -129,7 +142,8 @@ channels=1,2,3,4,5,6,7,8,9,10,11
 ```
 
 > [!NOTE]
-> - Ensure there are no spaces around the `=` sign when defining variables.
+> - When speedBased is `true` it will override `scanDelay`.
+> - Ensure there are no spaces.
 > - Only valid channels for your region should be included in the `channels` array to ensure compliance with local regulations.
 > - Adjust the `scanDelay` value to balance between scan frequency and power consumption when `speedBased` is set to `false`.
 
@@ -137,7 +151,7 @@ channels=1,2,3,4,5,6,7,8,9,10,11
 
 After flashing, the device scans for Wi-Fi networks, using LEDs to display status. Configure with the SD config.txt file or use the defaults as described.
 
-**LED Indicators:**
+#### LED Indicators
 - RED blink if the SD card is missing/write error.
 - PURPLE blink while waiting for a GPS fix.
 - GREEN blink during scanning

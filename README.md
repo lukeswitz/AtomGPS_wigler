@@ -127,11 +127,11 @@ The `config.txt` file on the SD card can contain the following variables, each d
    - **Example**: `adaptiveScan=false`
 
 4. **channels**
-   - **Type**: Array of Integers
+   - **Type**: Array of **up to 14** Integers, with reuse possible.
    - **Default**: `channels=1,2,3,4,5,6,7,8,9,10,11`
    - **Description**: A comma-separated list of WiFi channels to scan.
    - **Values**: Any valid WiFi channel numbers (1-11 for most regions)
-   - **Example**: `channels=1,6,11`
+   - **Example**: `channels=1,6,11,12,13,14`
 
 ### Example `config.txt`
 ```

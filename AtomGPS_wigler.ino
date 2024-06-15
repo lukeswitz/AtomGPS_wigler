@@ -4,7 +4,7 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.6.1";
+const String BUILD = "1.6.3";
 const String VERSION = "1.6";
 
 // LED
@@ -31,18 +31,19 @@ float lon;
 float altitude;
 float accuracy;
 
-// Speed-based scan vars
+// Speed-based scan vars, overrides scanDelay
 double speed = -1;
 static int stop = 500;           // 1s delay while stopped
 static int slow = 250;           // 400ms delay < 15mph
-static int fast = 100;           // 150ms delay > 15mph
+static int fast = 100;           // 100ms delay > 15mph
 static int uninitialized = 250;  // No GPS fix delay catch
 
-// Configurable vars
+// Configurable vars from SD
 bool speedBased = false;
 int scanDelay = 150;
 bool adaptiveScan = true;
-int channels[11] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };  // Channels 1-11
+// Jurisdictional, using USA standards 1-11. Set up to 14
+int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
 
 void setup() {
   // Init connection & filesys
@@ -319,9 +320,10 @@ void parseConfigFile(File file) {
 }
 
 void processConfigLine(const char* line) {
-  char key[32];
-  char value[32];
-  sscanf(line, "%[^=]=%s", key, value);
+  char key[50];  // Increased buffer size for key
+  char value[150];  // Increased buffer size for value
+
+  sscanf(line, "%49[^=]=%149[^\n]", key, value);  // Ensure no buffer overflow
 
   if (strcmp(key, "speedBased") == 0) {
     speedBased = (strcmp(value, "true") == 0);

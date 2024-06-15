@@ -4,6 +4,7 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
+
 const String BUILD = "1.6.3";
 const String VERSION = "1.6";
 
@@ -299,7 +300,7 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, ad
 }
 // SD Config
 void parseConfigFile(File file) {
-  char line[64];
+  char line[80];
   int lineIndex = 0;
   while (file.available()) {
     char c = file.read();
@@ -320,6 +321,7 @@ void parseConfigFile(File file) {
 }
 
 void processConfigLine(const char* line) {
+
   char key[50];  // Increased buffer size for key
   char value[150];  // Increased buffer size for value
 

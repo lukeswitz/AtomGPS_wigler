@@ -299,7 +299,7 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, ad
 }
 // SD Config
 void parseConfigFile(File file) {
-  char line[64];
+  char line[80];
   int lineIndex = 0;
   while (file.available()) {
     char c = file.read();

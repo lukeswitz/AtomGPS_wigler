@@ -4,7 +4,8 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.6.2";
+
+const String BUILD = "1.6.3";
 const String VERSION = "1.6";
 
 // LED
@@ -320,9 +321,11 @@ void parseConfigFile(File file) {
 }
 
 void processConfigLine(const char* line) {
-  char key[32];
-  char value[48];
-  sscanf(line, "%[^=]=%s", key, value);
+
+  char key[50];  // Increased buffer size for key
+  char value[150];  // Increased buffer size for value
+
+  sscanf(line, "%49[^=]=%149[^\n]", key, value);  // Ensure no buffer overflow
 
   if (strcmp(key, "speedBased") == 0) {
     speedBased = (strcmp(value, "true") == 0);

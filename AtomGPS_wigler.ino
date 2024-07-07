@@ -4,7 +4,7 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.6.3";
+const String BUILD = "1.6.4";  // added config.txt key/vaue for filePrefix
 const String VERSION = "1.6";
 
 // LED
@@ -44,6 +44,7 @@ int scanDelay = 150;
 bool adaptiveScan = true;
 // Jurisdictional, using USA standards 1-11. Set up to 14
 int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+char filePrefix[50] = "AtomWigler";  // default filePrefix for fileName on SD card
 
 void setup() {
   // Init connection & filesys
@@ -77,6 +78,8 @@ void setup() {
       Serial.println(scanDelay);
       Serial.print("adaptiveScan: ");
       Serial.println(adaptiveScan ? "true" : "false");
+      Serial.print("filePrefix: ");
+      Serial.println(filePrefix);
       Serial.print("channels: ");
       for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
         if (channels[i] != 0) {  // Print only valid channels
@@ -221,7 +224,9 @@ void initializeFile() {
   char fileDateStamp[16];
   sprintf(fileDateStamp, "%04d-%02d-%02d-", gps.date.year(), gps.date.month(), gps.date.day());
   do {
-    snprintf(fileName, sizeof(fileName), "/AtomWigler-%s%d.csv", fileDateStamp, fileNumber);
+    snprintf(fileName, sizeof(fileName), "/%s-%s%d.csv", filePrefix, fileDateStamp, fileNumber);  // pick up filePrefix from var or config file [PEJ]
+    Serial.println("fileName: " + String(fileName)); // ** DEBUG **
+
     isNewFile = !SD.exists(fileName);
     fileNumber++;
   } while (!isNewFile);
@@ -333,6 +338,8 @@ void processConfigLine(const char* line) {
     adaptiveScan = (strcmp(value, "true") == 0);
   } else if (strcmp(key, "channels") == 0) {
     parseChannels(value);
+  } else if (strcmp(key, "filePrefix") == 0) {   // add filePrefix so we can adjust per unit [PEJ]
+    strcpy(filePrefix,value); // filePrefix = value;
   }
 }
 

@@ -133,12 +133,20 @@ The `config.txt` file on the SD card can contain the following variables, each d
    - **Values**: Any valid WiFi channel numbers (1-11 for most regions)
    - **Example**: `channels=1,6,11,12,13,14`
 
+5. **filePrefix**
+   - **Type**: String of **up to 50** Characters
+   - **Default**: `filePrefix=AtomWigler`
+   - **Description**: The base filename to be used for each run. Handy for people with too many AtomGPS units to keep track of.
+   - **Values**: Any string that is a valid filename
+   - **Example**: `filePrefix=AtomWigler-6`
+
 ### Example `config.txt`
 ```
 speedBased=false
 scanDelay=250
 adaptiveScan=true
 channels=1,2,3,4,5,6,7,8,9,10,11
+filePrefix=AtomWigler-6
 ```
 
 > [!NOTE]

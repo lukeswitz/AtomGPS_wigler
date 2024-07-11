@@ -4,7 +4,7 @@
 #include <TinyGPS++.h>
 #include <WiFi.h>
 
-const String BUILD = "1.6.3";
+const String BUILD = "1.6.4";
 const String VERSION = "1.6";
 
 // LED
@@ -14,15 +14,22 @@ bool buttonLedState = true;
 #define GREEN 0x00ff00
 #define BLUE 0x0000ff
 #define YELLOW 0xffff00
+#define ORANGE 0xffa500
 #define PURPLE 0x800080
 #define CYAN 0x00ffff
 #define WHITE 0xffffff
 #define OFF 0x000000
 
+// Quad boundaries, change to activate orange LED when outside it
+float quadLatMin = -90.0;    // Minimum latitude boundary 
+float quadLatMax = 90.0;     // Maximum latitude boundary 
+float quadLonMin = -180.0;   // Minimum longitude boundary 
+float quadLonMax = 180.0;    // Maximum longitude boundary 
+
 // Scan & GPS
 TinyGPSPlus gps;
 char fileName[50];
-const int maxMACs = 150;  // TESTING: buffer size
+const int maxMACs = 150;  // TESTING
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
 int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 };  // change for your region
@@ -30,8 +37,9 @@ float lat;
 float lon;
 float altitude;
 float accuracy;
+int numSatellites;
 
-// Speed-based scan vars, overrides scanDelay
+// Speed-based scan vars, overrides scanDelay set from SD
 double speed = -1;
 static int stop = 500;           // 1s delay while stopped
 static int slow = 250;           // 400ms delay < 15mph
@@ -42,8 +50,7 @@ static int uninitialized = 250;  // No GPS fix delay catch
 bool speedBased = false;
 int scanDelay = 150;
 bool adaptiveScan = true;
-// Jurisdictional, using USA standards 1-11. Set up to 14
-int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };  // Jurisdictional, using US regs 1-11. Set up to 14.
 
 void setup() {
   // Init connection & filesys
@@ -52,7 +59,7 @@ void setup() {
   Serial.println("Starting AtomWigler...");
   M5.begin(true, false, true);
   SPI.begin(23, 33, 19, -1);
-  delay(1000); // let system catch up
+  delay(1000);  // let system catch up
 
   while (!SD.begin(15, SPI, 40000000)) {
     Serial.println("SD Card initialization failed! Retrying...");
@@ -146,8 +153,11 @@ void loop() {
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
 
-    // Use configured channels
-    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
+    if (isOutsideQuad(lat, lon)) {
+      flashLEDOutsideQuad();
+    }
+
+    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {  // scan wifi
       int channel = channels[i];
 
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
@@ -178,25 +188,34 @@ void loop() {
   }
 }
 
-// ------------GPS----------------
-void blinkLED(uint32_t color, unsigned long interval) {
-  static unsigned long previousBlinkMillis = 0;
-  unsigned long currentMillis = millis();
+void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
+  const int FEW_NETWORKS_THRESHOLD = 1;
+  const int MANY_NETWORKS_THRESHOLD = 7;
+  const int TIME_INCREMENT = 50;
+  const int MAX_TIME = 500;
+  const int MIN_TIME = 50;
 
-  if (currentMillis - previousBlinkMillis >= interval) {
-    ledState = !ledState;
-    M5.dis.drawpix(0, ledState ? color : OFF);
-    previousBlinkMillis = currentMillis;
+  if (networksFound >= MANY_NETWORKS_THRESHOLD) {
+    timePerChannel[channel - 1] = min(timePerChannel[channel - 1] + TIME_INCREMENT, MAX_TIME);
+  } else if (networksFound <= FEW_NETWORKS_THRESHOLD) {
+    timePerChannel[channel - 1] = max(timePerChannel[channel - 1] - TIME_INCREMENT, MIN_TIME);
   }
+}
+
+// GPS
+bool isOutsideQuad(float latitude, float longitude) {
+  return (latitude < quadLatMin || latitude > quadLatMax || longitude < quadLonMin || longitude > quadLonMax);
 }
 
 void waitForGPSFix() {
   Serial.println("Waiting for GPS fix...");
   while (!gps.location.isValid()) {
+   numSatellites = gps.satellites.value();
     if (Serial1.available() > 0) {
       gps.encode(Serial1.read());
-    }
-    blinkLED(PURPLE, 300);
+    }    
+    // Serial.println("Sats: " + String(numSatellites));
+    blinkLEDFaster(numSatellites);
   }
   M5.dis.clear();
   Serial.println("GPS fix obtained.");
@@ -211,6 +230,43 @@ const int* getSpeed(double speed) {
     return &slow;
   } else {
     return &fast;
+  }
+}
+
+// LED
+void flashLEDOutsideQuad() {
+    M5.dis.drawpix(0, ORANGE);
+    delay(200);
+    M5.dis.clear();
+    delay(200);
+}
+
+void blinkLEDFaster(int numSatellites) {
+  unsigned long interval;
+  if (numSatellites <= 1) {
+    interval = 1000;  // Slow blink for 0 or 1 satellites
+  } else {
+    interval = max(50, 1000 / numSatellites);  // Blink interval decreases as the number of satellites increases
+  }
+  
+  static unsigned long previousBlinkMillis = 0;
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousBlinkMillis >= interval) {
+    ledState = !ledState;
+    M5.dis.drawpix(0, ledState ? PURPLE : OFF);
+    previousBlinkMillis = currentMillis;
+  }
+}
+
+void blinkLED(uint32_t color, unsigned long interval) {
+  static unsigned long previousBlinkMillis = 0;
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousBlinkMillis >= interval) {
+    ledState = !ledState;
+    M5.dis.drawpix(0, ledState ? color : OFF);
+    previousBlinkMillis = currentMillis;
   }
 }
 
@@ -258,7 +314,6 @@ void logData(const char* data) {
   }
 }
 
-// WiFI
 const char* getAuthType(uint8_t wifiAuth) {
   switch (wifiAuth) {
     case WIFI_AUTH_OPEN:
@@ -284,22 +339,11 @@ const char* getAuthType(uint8_t wifiAuth) {
   }
 }
 
-void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
-  const int FEW_NETWORKS_THRESHOLD = 1;
-  const int MANY_NETWORKS_THRESHOLD = 7;
-  const int TIME_INCREMENT = 50;
-  const int MAX_TIME = 500;
-  const int MIN_TIME = 50;
 
-  if (networksFound >= MANY_NETWORKS_THRESHOLD) {
-    timePerChannel[channel - 1] = min(timePerChannel[channel - 1] + TIME_INCREMENT, MAX_TIME);
-  } else if (networksFound <= FEW_NETWORKS_THRESHOLD) {
-    timePerChannel[channel - 1] = max(timePerChannel[channel - 1] - TIME_INCREMENT, MIN_TIME);
-  }
-}
+
 // SD Config
 void parseConfigFile(File file) {
-  char line[80];
+  char line[64];
   int lineIndex = 0;
   while (file.available()) {
     char c = file.read();
@@ -320,7 +364,7 @@ void parseConfigFile(File file) {
 }
 
 void processConfigLine(const char* line) {
-  char key[50];  // Increased buffer size for key
+  char key[50];     // Increased buffer size for key
   char value[150];  // Increased buffer size for value
 
   sscanf(line, "%49[^=]=%149[^\n]", key, value);  // Ensure no buffer overflow
@@ -345,7 +389,7 @@ void parseChannels(const char* value) {
     }
     token = strtok(NULL, ",");
   }
-  
+
   // Clear the rest of the channels array if fewer channels are defined
   while (index < sizeof(channels) / sizeof(channels[0])) {
     channels[index++] = 0;

@@ -151,11 +151,17 @@ channels=1,2,3,4,5,6,7,8,9,10,11
 
 After flashing, the device scans for Wi-Fi networks, using LEDs to display status. Configure with the SD config.txt file or use the defaults as described.
 
+#### WWDC 32 Quad Feature
+- By leaving the values as they are, no quad will be defined and work as normal.
+- Change them to your coordinates, **the scan will continue even if you do happen to exit the perimeter.**
+
 #### LED Indicators
 - RED blink if the SD card is missing/write error.
 - PURPLE blink while waiting for a GPS fix.
-- GREEN blink during scanning
-- **Press and hold the button during scanning to toggle the Green LED.**
+- GREEN blink during normal scanning
+- ORANGE blink when outside set quad perimeter
+
+- **Press and hold the button during scanning to toggle the status LED on/off.**
   
  ***Bonus: Contribute to the [wigle.net](https://wigle.net) database. Or join the community and compete to find the most Wi-Fi networks.***
 

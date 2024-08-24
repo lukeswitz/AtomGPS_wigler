@@ -20,12 +20,6 @@ bool buttonLedState = true;
 #define WHITE 0xffffff
 #define OFF 0x000000
 
-// Quad boundaries, change to activate orange LED when outside it
-float quadLatMin = -90.0;    // Minimum latitude boundary 
-float quadLatMax = 90.0;     // Maximum latitude boundary 
-float quadLonMin = -180.0;   // Minimum longitude boundary 
-float quadLonMax = 180.0;    // Maximum longitude boundary 
-
 // Scan & GPS
 TinyGPSPlus gps;
 char fileName[50];
@@ -153,13 +147,8 @@ void loop() {
     char utc[21];
     sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
 
-    if (isOutsideQuad(lat, lon)) {
-      flashLEDOutsideQuad();
-    }
-
     for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {  // scan wifi
       int channel = channels[i];
-
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
       for (int i = 0; i < numNetworks; i++) {
         char currentMAC[20];
@@ -194,7 +183,6 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, ad
   const int TIME_INCREMENT = 50;
   const int MAX_TIME = 500;
   const int MIN_TIME = 50;
-
   if (networksFound >= MANY_NETWORKS_THRESHOLD) {
     timePerChannel[channel - 1] = min(timePerChannel[channel - 1] + TIME_INCREMENT, MAX_TIME);
   } else if (networksFound <= FEW_NETWORKS_THRESHOLD) {
@@ -203,10 +191,6 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, ad
 }
 
 // GPS
-bool isOutsideQuad(float latitude, float longitude) {
-  return (latitude < quadLatMin || latitude > quadLatMax || longitude < quadLonMin || longitude > quadLonMax);
-}
-
 void waitForGPSFix() {
   Serial.println("Waiting for GPS fix...");
   while (!gps.location.isValid()) {
@@ -214,7 +198,7 @@ void waitForGPSFix() {
     if (Serial1.available() > 0) {
       gps.encode(Serial1.read());
     }    
-    // Serial.println("Sats: " + String(numSatellites));
+    // Serial.println("Sat count: " + String(numSatellites));
     blinkLEDFaster(numSatellites);
   }
   M5.dis.clear();
@@ -234,13 +218,6 @@ const int* getSpeed(double speed) {
 }
 
 // LED
-void flashLEDOutsideQuad() {
-    M5.dis.drawpix(0, ORANGE);
-    delay(200);
-    M5.dis.clear();
-    delay(200);
-}
-
 void blinkLEDFaster(int numSatellites) {
   unsigned long interval;
   if (numSatellites <= 1) {
@@ -362,8 +339,8 @@ void parseConfigFile(File file) {
 }
 
 void processConfigLine(const char* line) {
-  char key[50];     // Increased buffer size for key
-  char value[150];  // Increased buffer size for value
+  char key[50];
+  char value[150];
 
   sscanf(line, "%49[^=]=%149[^\n]", key, value);  // Ensure no buffer overflow
 
@@ -388,7 +365,6 @@ void parseChannels(const char* value) {
     token = strtok(NULL, ",");
   }
 
-  // Clear the rest of the channels array if fewer channels are defined
   while (index < sizeof(channels) / sizeof(channels[0])) {
     channels[index++] = 0;
   }

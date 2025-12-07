@@ -1,18 +1,24 @@
+<div align="center">
+
 [![GitHub Tag](https://img.shields.io/github/v/tag/lukeswitz/AtomGPS_wigler?label=release)](https://github.com/lukeswitz/AtomGPS_wigler/releases)
 
 # AtomGPS Wigler
 
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/445f6f37-500d-49de-94ea-d511d32e1162" />
+
+</div>
+
 ## Overview
 **This tool scans for Wi-Fi networks and Bluetooth LE devices for geolocation mapping.**
 
-- AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning). For use with the M5Stack Atom GPS kit, this tool is specifically designed for Wi-Fi network geolocation. 
-- LED status indicators are outlined below. [Wigle](wigle.net) compatible CSV files are written to SD.
+- **AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning).
+- For use with the M5Stack Atom GPS kit, this tool is specifically designed for Wi-Fi network and BLE device geolocation. 
+- LED status indicators are outlined below.
+- [Wigle](wigle.net) compatible CSV files are written to SD.
 
 ## Table of Contents
 
 - [Flashing to AtomGPS](#flashing-to-atomgps)
-  - [Method One: Esptool.py](#method-one-esptoolpy)
-  - [Method Two: Arduino IDE](#method-two-arduino-ide)
 - [SD Configuration](#sd-configuration)
   - [Variables](#variables)
   - [Example config.txt file](#example-configtxt)
@@ -25,7 +31,7 @@
 
 - M5 AtomGPS
 - SD card (Formatted FAT32)
-- Arduino IDE or ` Esptool.py`
+- Arduino IDE, Chrome based browser or `Esptool.py`
 
 ## Flashing to AtomGPS
 ### Web Flasher (Recommended)
@@ -99,6 +105,7 @@ SD
 SPI
 TinyGPSPlus
 WiFi
+NimBLE
 ```
 For example:
    - `Library Manager` > search `M5Atom`. Click `Install`. 

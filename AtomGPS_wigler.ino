@@ -3,9 +3,10 @@
 #include <SPI.h>
 #include <TinyGPS++.h>
 #include <WiFi.h>
+#include <NimBLEDevice.h>
 
-const String BUILD = "1.6.4";
-const String VERSION = "1.6";
+const String BUILD = "1.7.0";
+const String VERSION = "1.7";
 
 // LED
 bool ledState = false;
@@ -23,37 +24,79 @@ bool buttonLedState = true;
 // Scan & GPS
 TinyGPSPlus gps;
 char fileName[50];
-const int maxMACs = 150;  // TESTING
+const int maxMACs = 150;
 char macAddressArray[maxMACs][20];
 int macArrayIndex = 0;
-int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 };  // change for your region
+int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 50, 50, 50 };
 float lat;
 float lon;
 float altitude;
 float accuracy;
 int numSatellites;
 
-// Speed-based scan vars, overrides scanDelay set from SD
+// BLE Scanning
+NimBLEScan* pBLEScan;
+const int BLE_SCAN_TIME = 0;
+bool isMACSeen(const char* mac);
+void logData(const char* data);
+
+// Speed-based scan vars
 double speed = -1;
-static int stop = 500;           // 1s delay while stopped
-static int slow = 250;           // 400ms delay < 15mph
-static int fast = 100;           // 100ms delay > 15mph
-static int uninitialized = 250;  // No GPS fix delay catch
+static int stop = 500;
+static int slow = 250;
+static int fast = 100;
+static int uninitialized = 250;
 
 // Configurable vars from SD
 bool speedBased = false;
 int scanDelay = 150;
 bool adaptiveScan = true;
-int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };  // Jurisdictional, using US regs 1-11. Set up to 14.
+bool bleScanEnabled = true;
+int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }; // Set for your region
+char filePrefix[50] = "AtomWigler";
+
+class BLEScanCallbacks : public NimBLEScanCallbacks {
+  void onResult(const NimBLEAdvertisedDevice* advertisedDevice) override {
+    if (!gps.location.isValid()) return;
+
+    char currentMAC[20];
+    strcpy(currentMAC, advertisedDevice->getAddress().toString().c_str());
+    
+    if (!isMACSeen(currentMAC)) {
+      strcpy(macAddressArray[macArrayIndex++], currentMAC);
+      if (macArrayIndex >= maxMACs) macArrayIndex = 0;
+
+      char utc[21];
+      sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", 
+              gps.date.year(), gps.date.month(), gps.date.day(), 
+              gps.time.hour(), gps.time.minute(), gps.time.second());
+
+      String deviceName = advertisedDevice->haveName() ? 
+                          advertisedDevice->getName().c_str() : "";
+
+      char dataString[300];
+      snprintf(dataString, sizeof(dataString), 
+               "%s,\"%s\",[BLE],%s,0,%d,%.6f,%.6f,%.2f,%.2f,BLE", 
+               currentMAC, 
+               deviceName.c_str(),
+               utc, 
+               advertisedDevice->getRSSI(), 
+               lat, lon, altitude, accuracy);
+      logData(dataString);
+    }
+  }
+
+  void onScanEnd(const NimBLEScanResults& results, int reason) override {
+  }
+};
 
 void setup() {
-  // Init connection & filesys
   Serial.begin(115200);
   delay(1000);
   Serial.println("Starting AtomWigler...");
   M5.begin(true, false, true);
   SPI.begin(23, 33, 19, -1);
-  delay(1000);  // let system catch up
+  delay(1000);
 
   while (!SD.begin(15, SPI, 40000000)) {
     Serial.println("SD Card initialization failed! Retrying...");
@@ -63,14 +106,12 @@ void setup() {
 
   Serial.println("SD Card initialized.");
 
-  // Read and parse config file
   if (SD.exists("/config.txt")) {
     File configFile = SD.open("/config.txt");
     if (configFile) {
       parseConfigFile(configFile);
       configFile.close();
 
-      // Print parsed values
       Serial.println("Configuration values:");
       Serial.print("speedBased: ");
       Serial.println(speedBased ? "true" : "false");
@@ -78,9 +119,13 @@ void setup() {
       Serial.println(scanDelay);
       Serial.print("adaptiveScan: ");
       Serial.println(adaptiveScan ? "true" : "false");
+      Serial.print("filePrefix: ");
+      Serial.println(filePrefix);
+      Serial.print("bleScanEnabled: ");
+      Serial.println(bleScanEnabled ? "true" : "false");
       Serial.print("channels: ");
       for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
-        if (channels[i] != 0) {  // Print only valid channels
+        if (channels[i] != 0) {
           Serial.print(channels[i]);
           if (i < sizeof(channels) / sizeof(channels[0]) - 1 && channels[i + 1] != 0) {
             Serial.print(", ");
@@ -97,42 +142,50 @@ void setup() {
     Serial.println("Config file not found.");
   }
 
-  // Init WiFi
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
-
   Serial.println("WiFi initialized.");
 
-  // Init GPS
+  if (bleScanEnabled) {
+    NimBLEDevice::init("");
+    pBLEScan = NimBLEDevice::getScan();
+    pBLEScan->setScanCallbacks(new BLEScanCallbacks());
+    pBLEScan->setActiveScan(true);
+    pBLEScan->setInterval(100);
+    pBLEScan->setWindow(99);
+    pBLEScan->setMaxResults(0);
+    pBLEScan->start(BLE_SCAN_TIME, false);
+    Serial.println("BLE scan initialized.");
+  } else {
+    Serial.println("BLE scan disabled by config.");
+  }
+
   Serial1.begin(9600, SERIAL_8N1, 22, -1);
-  delay(1000);  // Allow time for GPS to initialize
+  delay(1000);
   Serial.println("GPS Serial initialized.");
   waitForGPSFix();
-  initializeFile();  // Have fix, write the file and begin scan
+  initializeFile();
 }
-
 
 void loop() {
   static unsigned long lastBlinkTime = 0;
   const unsigned long blinkInterval = 2500;
 
-  // Button blink toggle
   M5.update();
   if (M5.Btn.wasPressed()) {
     buttonLedState = !buttonLedState;
     delay(50);
   }
 
-  // Scan while we have a fix
   while (Serial1.available() > 0) {
     gps.encode(Serial1.read());
   }
 
   if (gps.location.isValid()) {
-    unsigned long currentMillis = millis();  // get the time here for accurate blinks
+    unsigned long currentMillis = millis();
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
-      M5.dis.drawpix(0, GREEN);  // Flash green
+      M5.dis.drawpix(0, GREEN);
       delay(60);
       M5.dis.clear();
       lastBlinkTime = currentMillis;
@@ -145,39 +198,48 @@ void loop() {
     speed = gps.speed.mph();
 
     char utc[21];
-    sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
+    sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", 
+            gps.date.year(), gps.date.month(), gps.date.day(), 
+            gps.time.hour(), gps.time.minute(), gps.time.second());
 
-    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {  // scan wifi
+    for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
       int channel = channels[i];
+      if (channel == 0) break;
+      
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
-      for (int i = 0; i < numNetworks; i++) {
+      for (int j = 0; j < numNetworks; j++) {
         char currentMAC[20];
-        strcpy(currentMAC, WiFi.BSSIDstr(i).c_str());
+        strcpy(currentMAC, WiFi.BSSIDstr(j).c_str());
         if (!isMACSeen(currentMAC)) {
           strcpy(macAddressArray[macArrayIndex++], currentMAC);
           if (macArrayIndex >= maxMACs) macArrayIndex = 0;
           char dataString[300];
-          snprintf(dataString, sizeof(dataString), "%s,\"%s\",%s,%s,%d,%d,%.6f,%.6f,%.2f,%.2f,WIFI", currentMAC, WiFi.SSID(i).c_str(), getAuthType(WiFi.encryptionType(i)), utc, WiFi.channel(i), WiFi.RSSI(i), lat, lon, altitude, accuracy);
+          snprintf(dataString, sizeof(dataString), 
+                   "%s,\"%s\",%s,%s,%d,%d,%.6f,%.6f,%.2f,%.2f,WIFI", 
+                   currentMAC, WiFi.SSID(j).c_str(), 
+                   getAuthType(WiFi.encryptionType(j)), utc, 
+                   WiFi.channel(j), WiFi.RSSI(j), 
+                   lat, lon, altitude, accuracy);
           logData(dataString);
         }
       }
       if (adaptiveScan) {
-        updateTimePerChannel(channel, numNetworks);  // Adaptive scan timing
+        updateTimePerChannel(channel, numNetworks);
       }
     }
   } else {
-    speed = -1;  // GPS lost, reset speed var
+    speed = -1;
     blinkLED(PURPLE, 250);
   }
 
   if (speedBased) {
-    delay(*getSpeed(speed));  // Speed based delay
+    delay(*getSpeed(speed));
   } else {
-    delay(scanDelay);  // Static delay
+    delay(scanDelay);
   }
 }
 
-void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, adjust as desired
+void updateTimePerChannel(int channel, int networksFound) {
   const int FEW_NETWORKS_THRESHOLD = 1;
   const int MANY_NETWORKS_THRESHOLD = 7;
   const int TIME_INCREMENT = 50;
@@ -190,15 +252,13 @@ void updateTimePerChannel(int channel, int networksFound) {  // BETA feature, ad
   }
 }
 
-// GPS
 void waitForGPSFix() {
   Serial.println("Waiting for GPS fix...");
   while (!gps.location.isValid()) {
-   numSatellites = gps.satellites.value();
+    numSatellites = gps.satellites.value();
     if (Serial1.available() > 0) {
       gps.encode(Serial1.read());
-    }    
-    // Serial.println("Sat count: " + String(numSatellites));
+    }
     blinkLEDFaster(numSatellites);
   }
   M5.dis.clear();
@@ -217,13 +277,12 @@ const int* getSpeed(double speed) {
   }
 }
 
-// LED
 void blinkLEDFaster(int numSatellites) {
   unsigned long interval;
   if (numSatellites <= 1) {
-    interval = 1000;  // Slow blink for 0 or 1 satellites
+    interval = 1000;
   } else {
-    interval = max(50, 1000 / numSatellites);  // Blink interval decreases as the number of satellites increases
+    interval = max(50, 1000 / numSatellites);
   }
   
   static unsigned long previousBlinkMillis = 0;
@@ -247,7 +306,6 @@ void blinkLED(uint32_t color, unsigned long interval) {
   }
 }
 
-// Filesys
 void initializeFile() {
   int fileNumber = 0;
   bool isNewFile = false;
@@ -316,14 +374,13 @@ const char* getAuthType(uint8_t wifiAuth) {
   }
 }
 
-// SD Config
 void parseConfigFile(File file) {
   char line[80];
   int lineIndex = 0;
   while (file.available()) {
     char c = file.read();
     if (c == '\n' || c == '\r') {
-      line[lineIndex] = '\0';  // Terminate the string
+      line[lineIndex] = '\0';
       if (lineIndex > 0) {
         processConfigLine(line);
       }
@@ -342,7 +399,7 @@ void processConfigLine(const char* line) {
   char key[50];
   char value[150];
 
-  sscanf(line, "%49[^=]=%149[^\n]", key, value);  // Ensure no buffer overflow
+  sscanf(line, "%49[^=]=%149[^\n]", key, value);
 
   if (strcmp(key, "speedBased") == 0) {
     speedBased = (strcmp(value, "true") == 0);
@@ -350,8 +407,12 @@ void processConfigLine(const char* line) {
     scanDelay = atoi(value);
   } else if (strcmp(key, "adaptiveScan") == 0) {
     adaptiveScan = (strcmp(value, "true") == 0);
+  } else if (strcmp(key, "bleScanEnabled") == 0) {
+    bleScanEnabled = (strcmp(value, "true") == 0);
   } else if (strcmp(key, "channels") == 0) {
     parseChannels(value);
+  } else if (strcmp(key, "filePrefix") == 0) {
+    strcpy(filePrefix,value); // filePrefix = value;
   }
 }
 

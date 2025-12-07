@@ -2,6 +2,9 @@
 
 # AtomGPS Wigler
 
+## Overview
+**This tool scans for Wi-Fi networks and Bluetooth LE devices for geolocation mapping. AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning). For use with the M5Stack Atom GPS kit, this tool is specifically designed for Wi-Fi network geolocation. LED status indicators are outlined below. [Wigle](wigle.net) compatible CSV files are written to SD.
+
 ## Table of Contents
 
 - [Flashing to AtomGPS](#flashing-to-atomgps)
@@ -15,9 +18,6 @@
 - [Feedback & Community](#feedback--community)
 
 
-## Overview
-**AtomGPS Wigler** is a wardriving tool originally created by [@lozaning](https://github.com/lozaning). For use with the M5Stack Atom GPS kit, this tool is specifically designed for Wi-Fi network geolocation. LED status indicators are outlined below. [Wigle](wigle.net) compatible CSV files are written to SD.
-
 ### Prerequisites
 
 - M5 AtomGPS
@@ -25,6 +25,22 @@
 - Arduino IDE or ` Esptool.py`
 
 ## Flashing to AtomGPS
+### Web Flasher (Recommended)
+
+**No software installation required - flash directly from your browser.**
+
+1. Visit: **https://lukeswitz.github.io/AtomGPS_wigler/**
+2. Connect M5Stack ATOM GPS via USB-C
+3. Click **[DEPLOY FIRMWARE]**
+4. Select serial port when prompted
+5. Wait ~90 seconds for completion
+6. Device auto-reboots and begins GPS acquisition
+
+**Requirements:** Chrome, Edge, or Opera browser
+
+
+### Build from source
+
 - **Download this forked codebase:**
     ```bash
     git clone https://github.com/lukeswitz/AtomGPS_wigler.git
@@ -133,11 +149,19 @@ The `config.txt` file on the SD card can contain the following variables, each d
    - **Values**: Any valid WiFi channel numbers (1-11 for most regions)
    - **Example**: `channels=1,6,11,12,13,14`
 
+5. **bleScanEnabled**
+   - **Type**: Boolean
+   - **Default**: `true`
+   - **Description**: Enables Bluetooth Low Energy device scanning.
+   - **Values**: `true` or `false`
+   - **Example**: `bleScanEnabled=true`
+
 ### Example `config.txt`
 ```
 speedBased=false
-scanDelay=250
+scanDelay=150
 adaptiveScan=true
+bleScanEnabled=true
 channels=1,2,3,4,5,6,7,8,9,10,11
 ```
 

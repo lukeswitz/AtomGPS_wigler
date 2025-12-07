@@ -105,6 +105,7 @@ SD
 SPI
 TinyGPSPlus
 WiFi
+NimBLE
 ```
 For example:
    - `Library Manager` > search `M5Atom`. Click `Install`. 

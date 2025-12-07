@@ -37,6 +37,7 @@ int numSatellites;
 // BLE Scanning
 NimBLEScan* pBLEScan;
 const int BLE_SCAN_TIME = 0;
+const int BLE_MAX_RESULTS = 50;
 bool isMACSeen(const char* mac);
 void logData(const char* data);
 String sanitizeCSVField(String field);
@@ -95,6 +96,9 @@ class BLEScanCallbacks : public NimBLEScanCallbacks {
   }
 
   void onScanEnd(const NimBLEScanResults& results, int reason) override {
+    if (bleScanEnabled && pBLEScan) {
+      pBLEScan->clearResults();
+    }
   }
 };
 
@@ -162,7 +166,7 @@ void setup() {
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
-    pBLEScan->setMaxResults(0);
+    pBLEScan->setMaxResults(BLE_MAX_RESULTS);
     pBLEScan->start(BLE_SCAN_TIME, false);
     Serial.println("BLE scan initialized.");
   } else {
@@ -174,11 +178,16 @@ void setup() {
   Serial.println("GPS Serial initialized.");
   waitForGPSFix();
   initializeFile();
+  
+  Serial.print("Free heap after setup: ");
+  Serial.println(ESP.getFreeHeap());
 }
 
 void loop() {
   static unsigned long lastBlinkTime = 0;
   const unsigned long blinkInterval = 2500;
+  static unsigned long lastMemCheck = 0;
+  const unsigned long memCheckInterval = 30000;
 
   M5.update();
   if (M5.Btn.wasPressed()) {
@@ -197,6 +206,16 @@ void loop() {
       delay(60);
       M5.dis.clear();
       lastBlinkTime = currentMillis;
+    }
+
+    if (currentMillis - lastMemCheck >= memCheckInterval) {
+      uint32_t freeHeap = ESP.getFreeHeap();
+      Serial.print("Free heap: ");
+      Serial.println(freeHeap);
+      if (freeHeap < 20000) {
+        Serial.println("WARNING: Low memory detected!");
+      }
+      lastMemCheck = currentMillis;
     }
 
     lat = gps.location.lat();
@@ -235,6 +254,8 @@ void loop() {
           logData(dataString);
         }
       }
+      WiFi.scanDelete();
+      
       if (adaptiveScan) {
         updateTimePerChannel(channel, numNetworks);
       }
@@ -331,7 +352,11 @@ void initializeFile() {
   if (isNewFile) {
     File dataFile = SD.open(fileName, FILE_WRITE);
     if (dataFile) {
-      dataFile.println("WigleWifi-1.4,appRelease=" + BUILD + ",model=AtomWigler,release=" + VERSION + ",device=M5ATOMGPS,display=NONE,board=ESP32,brand=M5");
+      dataFile.print("WigleWifi-1.4,appRelease=");
+      dataFile.print(BUILD);
+      dataFile.print(",model=AtomWigler,release=");
+      dataFile.print(VERSION);
+      dataFile.println(",device=M5ATOMGPS,display=NONE,board=ESP32,brand=M5");
       dataFile.println("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type");
       dataFile.close();
       Serial.println("New file created: " + String(fileName));

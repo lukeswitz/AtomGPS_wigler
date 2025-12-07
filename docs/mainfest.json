@@ -3,7 +3,7 @@
   "version": "1.7.0",
   "home_assistant_domain": "esphome",
   "funding_url": "https://github.com/lukeswitz/AtomGPS_wigler",
-  "new_install_prompt_erase": false,
+  "new_install_prompt_erase": true,
   "builds": [
     {
       "chipFamily": "ESP32",
@@ -21,7 +21,7 @@
           "offset": 57344
         },
         {
-          "path": "firmware/AtomWigler.bin",
+          "path": "firmware/firmware.bin",
           "offset": 65536
         }
       ]

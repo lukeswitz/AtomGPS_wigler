@@ -156,12 +156,21 @@ The `config.txt` file on the SD card can contain the following variables, each d
    - **Values**: `true` or `false`
    - **Example**: `bleScanEnabled=true`
 
+6. **filePrefix**
+   - **Type**: String
+   - **Default**: `AtomWigler`
+   - **Description**: Prefix for CSV log filenames on SD card.
+   - **Values**: Any valid filename characters (no spaces or special characters)
+   - **Example**: `filePrefix=MyWardriveData`
+   - **Note**: Results in filenames like `/MyWardriveData-2024-12-07-0.csv`
+
 ### Example `config.txt`
 ```
 speedBased=false
 scanDelay=150
 adaptiveScan=true
 bleScanEnabled=true
+filePrefix=AtomWigler
 channels=1,2,3,4,5,6,7,8,9,10,11
 ```
 

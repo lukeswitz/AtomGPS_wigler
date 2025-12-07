@@ -4,7 +4,7 @@
 
 # AtomGPS Wigler
 
-<img width="905" height="1024" alt="image" src="https://github.com/user-attachments/assets/445f6f37-500d-49de-94ea-d511d32e1162" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/445f6f37-500d-49de-94ea-d511d32e1162" />
 
 </div>
 

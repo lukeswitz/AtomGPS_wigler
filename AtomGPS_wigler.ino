@@ -39,6 +39,7 @@ NimBLEScan* pBLEScan;
 const int BLE_SCAN_TIME = 0;
 bool isMACSeen(const char* mac);
 void logData(const char* data);
+String sanitizeCSVField(String field);
 
 // Speed-based scan vars
 double speed = -1;
@@ -52,8 +53,14 @@ bool speedBased = false;
 int scanDelay = 150;
 bool adaptiveScan = true;
 bool bleScanEnabled = true;
-int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }; // Set for your region
+int channels[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
 char filePrefix[50] = "AtomWigler";
+
+String sanitizeCSVField(String field) {
+  field.replace(",", "_");
+  field.replace("\"", "\"\"");
+  return field;
+}
 
 class BLEScanCallbacks : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* advertisedDevice) override {
@@ -73,6 +80,7 @@ class BLEScanCallbacks : public NimBLEScanCallbacks {
 
       String deviceName = advertisedDevice->haveName() ? 
                           advertisedDevice->getName().c_str() : "";
+      deviceName = sanitizeCSVField(deviceName);
 
       char dataString[300];
       snprintf(dataString, sizeof(dataString), 
@@ -213,10 +221,14 @@ void loop() {
         if (!isMACSeen(currentMAC)) {
           strcpy(macAddressArray[macArrayIndex++], currentMAC);
           if (macArrayIndex >= maxMACs) macArrayIndex = 0;
+          
+          String ssid = WiFi.SSID(j);
+          ssid = sanitizeCSVField(ssid);
+          
           char dataString[300];
           snprintf(dataString, sizeof(dataString), 
                    "%s,\"%s\",%s,%s,%d,%d,%.6f,%.6f,%.2f,%.2f,WIFI", 
-                   currentMAC, WiFi.SSID(j).c_str(), 
+                   currentMAC, ssid.c_str(), 
                    getAuthType(WiFi.encryptionType(j)), utc, 
                    WiFi.channel(j), WiFi.RSSI(j), 
                    lat, lon, altitude, accuracy);
@@ -312,7 +324,7 @@ void initializeFile() {
   char fileDateStamp[16];
   sprintf(fileDateStamp, "%04d-%02d-%02d-", gps.date.year(), gps.date.month(), gps.date.day());
   do {
-    snprintf(fileName, sizeof(fileName), "/AtomWigler-%s%d.csv", fileDateStamp, fileNumber);
+    snprintf(fileName, sizeof(fileName), "/%s-%s%d.csv", filePrefix, fileDateStamp, fileNumber);
     isNewFile = !SD.exists(fileName);
     fileNumber++;
   } while (!isNewFile);
@@ -412,7 +424,7 @@ void processConfigLine(const char* line) {
   } else if (strcmp(key, "channels") == 0) {
     parseChannels(value);
   } else if (strcmp(key, "filePrefix") == 0) {
-    strcpy(filePrefix,value); // filePrefix = value;
+    strcpy(filePrefix,value);
   }
 }
 

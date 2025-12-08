@@ -202,7 +202,11 @@ void loop() {
   if (gps.location.isValid()) {
     unsigned long currentMillis = millis();
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
-      M5.dis.drawpix(0, GREEN);
+      if (bleScanEnabled) {
+      M5.dis.drawpix(0, BLUE); // flash Blue when BlueTooth scanning is enabled
+      } else {
+      M5.dis.drawpix(0, GREEN); // flash Green when WiFi scanning only
+      }
       delay(60);
       M5.dis.clear();
       lastBlinkTime = currentMillis;

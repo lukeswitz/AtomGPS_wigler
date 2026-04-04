@@ -67,6 +67,8 @@ class BLEScanCallbacks : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* advertisedDevice) override {
     if (!gps.location.isValid()) return;
 
+    M5.dis.drawpix(0, BLUE);
+
     char currentMAC[20];
     strcpy(currentMAC, advertisedDevice->getAddress().toString().c_str());
     
@@ -224,16 +226,31 @@ void loop() {
     accuracy = gps.hdop.hdop();
     speed = gps.speed.mph();
 
-    char utc[21];
-    sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d", 
-            gps.date.year(), gps.date.month(), gps.date.day(), 
-            gps.time.hour(), gps.time.minute(), gps.time.second());
-
     for (int i = 0; i < sizeof(channels) / sizeof(channels[0]); i++) {
       int channel = channels[i];
       if (channel == 0) break;
-      
+
+      while (Serial1.available() > 0) {
+        gps.encode(Serial1.read());
+      }
+
+      if (!gps.location.isValid()) continue;
+
+      lat = gps.location.lat();
+      lon = gps.location.lng();
+      altitude = gps.altitude.meters();
+      accuracy = gps.hdop.hdop();
+      speed = gps.speed.mph();
+
+      char utc[21];
+      sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d",
+              gps.date.year(), gps.date.month(), gps.date.day(),
+              gps.time.hour(), gps.time.minute(), gps.time.second());
+
+      M5.dis.drawpix(0, GREEN);
+
       int numNetworks = WiFi.scanNetworks(false, true, false, timePerChannel[channel - 1], channel);
+      
       for (int j = 0; j < numNetworks; j++) {
         char currentMAC[20];
         strcpy(currentMAC, WiFi.BSSIDstr(j).c_str());
@@ -255,6 +272,8 @@ void loop() {
         }
       }
       WiFi.scanDelete();
+
+      M5.dis.clear();
       
       if (adaptiveScan) {
         updateTimePerChannel(channel, numNetworks);
@@ -350,16 +369,44 @@ void initializeFile() {
     fileNumber++;
   } while (!isNewFile);
   if (isNewFile) {
-    File dataFile = SD.open(fileName, FILE_WRITE);
-    if (dataFile) {
-      dataFile.print("WigleWifi-1.4,appRelease=");
-      dataFile.print(BUILD);
-      dataFile.print(",model=AtomWigler,release=");
-      dataFile.print(VERSION);
-      dataFile.println(",device=M5ATOMGPS,display=NONE,board=ESP32,brand=M5");
-      dataFile.println("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type");
-      dataFile.close();
-      Serial.println("New file created: " + String(fileName));
+    bool headerWritten = false;
+    for (int attempt = 0; attempt < 3 && !headerWritten; attempt++) {
+      if (attempt > 0) {
+        Serial.print("Header write retry attempt ");
+        Serial.println(attempt);
+        delay(500);
+      }
+      File dataFile = SD.open(fileName, FILE_WRITE);
+      if (dataFile) {
+        size_t written = 0;
+        written += dataFile.print("WigleWifi-1.4,appRelease=");
+        written += dataFile.print(BUILD);
+        written += dataFile.print(",model=AtomWigler,release=");
+        written += dataFile.print(VERSION);
+        written += dataFile.println(",device=M5ATOMGPS,display=NONE,board=ESP32,brand=M5");
+        written += dataFile.println("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type");
+        dataFile.flush();
+        dataFile.close();
+        if (written > 0 && SD.exists(fileName)) {
+          File verify = SD.open(fileName, FILE_READ);
+          if (verify && verify.size() > 0) {
+            verify.close();
+            headerWritten = true;
+            Serial.println("New file created: " + String(fileName));
+          } else {
+            if (verify) verify.close();
+            Serial.println("Header verify failed: empty file.");
+          }
+        } else {
+          Serial.println("Header write returned 0 bytes.");
+        }
+      } else {
+        Serial.println("SD.open failed for header write.");
+      }
+    }
+    if (!headerWritten) {
+      Serial.println("FATAL: Could not write header after 3 attempts.");
+      blinkLED(RED, 200);
     }
   } else {
     Serial.println("Using existing file: " + String(fileName));

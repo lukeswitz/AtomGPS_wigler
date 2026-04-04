@@ -33,6 +33,7 @@ float lon;
 float altitude;
 float accuracy;
 int numSatellites;
+bool gpsSkipped = false;
 
 // BLE Scanning
 NimBLEScan* pBLEScan;
@@ -201,7 +202,7 @@ void loop() {
     gps.encode(Serial1.read());
   }
 
-  if (gps.location.isValid()) {
+  if (gps.location.isValid() || gpsSkipped) {
     unsigned long currentMillis = millis();
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
       M5.dis.drawpix(0, GREEN);
@@ -234,18 +235,20 @@ void loop() {
         gps.encode(Serial1.read());
       }
 
-      if (!gps.location.isValid()) continue;
-
-      lat = gps.location.lat();
-      lon = gps.location.lng();
-      altitude = gps.altitude.meters();
-      accuracy = gps.hdop.hdop();
-      speed = gps.speed.mph();
-
       char utc[21];
-      sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d",
-              gps.date.year(), gps.date.month(), gps.date.day(),
-              gps.time.hour(), gps.time.minute(), gps.time.second());
+      if (gpsSkipped) {
+        strcpy(utc, "0000-00-00 00:00:00");
+      } else {
+        if (!gps.location.isValid()) continue;
+        lat = gps.location.lat();
+        lon = gps.location.lng();
+        altitude = gps.altitude.meters();
+        accuracy = gps.hdop.hdop();
+        speed = gps.speed.mph();
+        sprintf(utc, "%04d-%02d-%02d %02d:%02d:%02d",
+                gps.date.year(), gps.date.month(), gps.date.day(),
+                gps.time.hour(), gps.time.minute(), gps.time.second());
+      }
 
       M5.dis.drawpix(0, GREEN);
 
@@ -305,8 +308,15 @@ void updateTimePerChannel(int channel, int networksFound) {
 }
 
 void waitForGPSFix() {
-  Serial.println("Waiting for GPS fix...");
+  Serial.println("Waiting for GPS fix. Press button to skip...");
   while (!gps.location.isValid()) {
+    M5.update();
+    if (M5.Btn.wasPressed()) {
+      gpsSkipped = true;
+      M5.dis.clear();
+      Serial.println("GPS fix skipped by user.");
+      return;
+    }
     numSatellites = gps.satellites.value();
     if (Serial1.available() > 0) {
       gps.encode(Serial1.read());
@@ -362,7 +372,11 @@ void initializeFile() {
   int fileNumber = 0;
   bool isNewFile = false;
   char fileDateStamp[16];
-  sprintf(fileDateStamp, "%04d-%02d-%02d-", gps.date.year(), gps.date.month(), gps.date.day());
+  if (gpsSkipped || !gps.date.isValid()) {
+    strcpy(fileDateStamp, "0000-00-00-");
+  } else {
+    sprintf(fileDateStamp, "%04d-%02d-%02d-", gps.date.year(), gps.date.month(), gps.date.day());
+  }
   do {
     snprintf(fileName, sizeof(fileName), "/%s-%s%d.csv", filePrefix, fileDateStamp, fileNumber);
     isNewFile = !SD.exists(fileName);
